@@ -107,9 +107,8 @@ function App() {
   const [step, setStep] = useState(0);
   const [messages, setMessages] = useState([]);
   const [responses, setResponses] = useState({});
-  const [quantIndex, setQuantIndex] = useState(0);
-  const [qualIndex, setQualIndex] = useState(0);
   const [sliderValues, setSliderValues] = useState({});
+  const [interactedInputs, setInteractedInputs] = useState({});
 
   useEffect(() => {
     console.log('Fetching data_clean.csv...');
@@ -131,7 +130,16 @@ function App() {
         console.log('Sample messages:', sample);
         const finalMessages = shuffle(sample).map((m,i)=>({ ...m, id:`msg_${i}` }));
         console.log('Final messages with IDs:', finalMessages);
-        setMessages(finalMessages);        
+        setMessages(finalMessages);
+        
+        // Initialize slider values to 0
+        const initialValues = {};
+        finalMessages.forEach(msg => {
+          initialValues[`${msg.id}_signaling`] = '0';
+          initialValues[`${msg.id}_prediction`] = '0';
+          initialValues[`${msg.id}_guilt`] = '0';
+        });
+        setSliderValues(initialValues);
       })
       .catch(error => {
         console.error('Error fetching or parsing CSV:', error);
@@ -144,14 +152,63 @@ function App() {
     if (key === 'prediction' || key === 'signaling' || key === 'guilt') {
       setSliderValues(prev=>({ ...prev, [`${id}_${key}`]: value }));
     }
+    // Mark this input as interacted with
+    setInteractedInputs(prev=>({ ...prev, [`${id}_${key}`]: true }));
   },[]);
 
-  const nextQuant = () => quantIndex < messages.length-1 ? setQuantIndex(q=>q+1) : setStep(2);
-  const nextQual = () => qualIndex < messages.length-1 ? setQualIndex(q=>q+1) : (()=>{
-    const out = messages.map(m=>({ id:m.id, message:m.message, generated:m.generated, ...responses[m.id] }));
-    exportToCSV(out);
-    setStep(3);
-  })();
+  const validateQuantitativePage = () => {
+    const requiredFields = [];
+    messages.forEach(msg => {
+      requiredFields.push(
+        `${msg.id}_commitment`,
+        `${msg.id}_signaling`,
+        `${msg.id}_emotion`,
+        `${msg.id}_prediction`,
+        `${msg.id}_guilt`
+      );
+    });
+
+    const missingFields = requiredFields.filter(field => !interactedInputs[field]);
+    return missingFields.length === 0;
+  };
+
+  const validateQualitativePage = () => {
+    const requiredFields = [];
+    messages.forEach(msg => {
+      requiredFields.push(
+        `${msg.id}_socialConnection`,
+        `${msg.id}_trusteeExpectations`,
+        `${msg.id}_influenceBehavior`,
+        `${msg.id}_guiltClues`
+      );
+    });
+
+    const missingFields = requiredFields.filter(field => !interactedInputs[field]);
+    return missingFields.length === 0;
+  };
+
+  const handleNextPage = () => {
+    if (validateQuantitativePage()) {
+      setStep(2);
+    } else {
+      alert('Please complete all fields on this page before proceeding. Make sure you have selected/adjusted values for all questions and messages.');
+    }
+  };
+
+  const handleSubmit = () => {
+    if (validateQualitativePage()) {
+      const out = messages.map(m=>({ 
+        id: m.id, 
+        message: m.message, 
+        generated: m.generated,
+        ...responses[m.id] 
+      }));
+      exportToCSV(out);
+      setStep(3);
+    } else {
+      alert('Please complete all text fields on this page before submitting. Make sure you have provided responses for all qualitative questions.');
+    }
+  };
 
   // Page 1: Introduction
   if(step===0) return (
@@ -166,7 +223,7 @@ function App() {
             <h3>Welcome, Dear Participant!</h3>
             <p>Thank you for taking part in our survey about "Generating qualitative data."</p>
             <p>This survey is designed to understand the role of communication in a trust game. It is part of a project on how large language models can be used to simulate human behavior in games.</p>
-            <p>The survey is divided into two parts: closed-ended (quantitative) and open-ended (qualitative) questions.</p>
+            <p>The survey is presented in a table format where you can evaluate all messages at once across different dimensions.</p>
             <p><strong>Privacy & Ethics:</strong> All answers are voluntary and you can leave the survey at any point. The answers are stored anonymously and under General Data Protection Regulations (GDPR). Moreover, responses will be used for academic purposes only.</p>
           </div>
           
@@ -179,6 +236,23 @@ function App() {
               <li>Western University, Canada</li>
             </ul>
           </div>
+
+          <div className="survey-section">
+            <h3 style={{ color: '#4f46e5', marginBottom: '1rem' }}>Game Rules</h3>
+            <p>Trust games are common experimental games to study trust between individuals. The game involves two players: a <strong>trustor</strong> and a <strong>trustee</strong>.</p>
+            <p>The trustor makes the first move by choosing between two options: <strong>OUT</strong> or <strong>IN</strong>. If the trustor chooses <strong>OUT</strong>, the game ends immediately, and both players receive a modest, guaranteed payoff.</p>
+            <p>If the trustor chooses <strong>IN</strong>, the trustee faces a decision: whether to <strong>ROLL</strong> or <strong>DON'T ROLL</strong> a virtual dice.</p>
+            <p>If the trustee chooses <strong>ROLL</strong>, there is a high probability (e.g., 5 out of 6) that both players will receive a relatively high payoff. However, there is also a small chance (e.g., 1 out of 6) that the trustee will receive a higher payoff while the trustor receives nothing.</p>
+            <p>If the trustee chooses <strong>DON'T ROLL</strong>, the trustee secures the high payoff for themselves with certainty, and the trustor receives nothing.</p>
+            <p>Before the trustor makes their decision, the trustee can send a one-time, free-form message to the trustor. This message is non-binding and contains nothing that can be enforced.</p>
+            
+            <div className="diagram-container">
+              <img 
+                src="/game_diag.png" 
+                alt="Trust Game Diagram" 
+              />
+            </div>
+          </div>
           
           <div style={{ textAlign: 'center', marginTop: '2rem' }}>
             <button className="btn btn-primary" onClick={()=>setStep(1)}>
@@ -190,257 +264,172 @@ function App() {
     </div>
   );
 
-  // Page 2: Quantitative
+  // Page 2: First Table Survey (Quantitative)
   if(step===1 && messages.length) {
-    const m = messages[quantIndex];
-    const progress = ((quantIndex + 1) / messages.length) * 100;
-    console.log('Rendering quantitative step. Step:', step, 'Messages length:', messages.length, 'Current message:', m);
     return (
       <div className="survey-container slide-in">
-        <div className="survey-card" style={{ maxWidth: '900px' }}>
+        <div className="survey-card" style={{ maxWidth: '1200px', width: '95vw' }}>
           <div className="survey-header">
-            <h2 className="survey-title" style={{ fontSize: '2rem' }}>Quantitative Survey</h2>
-            <p className="survey-subtitle">Question {quantIndex+1} of {messages.length}</p>
+            <h2 className="survey-title" style={{ fontSize: '2rem' }}>Survey Table - Page 1</h2>
+            <p className="survey-subtitle">Quantitative Evaluation: Rate each message across different dimensions</p>
           </div>
           
           <div className="survey-content">
-            <div className="progress-indicator">
-              <div className="progress-bar" style={{ width: `${progress}%` }}></div>
-            </div>
-            
             <div className="instructions">
               <h3>Instructions</h3>
-              <p>Please evaluate short messages sent by trustees to trustors in a trust game setting. Messages can be real or simulated. Please find the rules of the trust game below.</p>
-              <p>You will be separately presented {messages.length} messages sent by trustees. Please evaluate each message according to the offered dimensions.</p>
+              <p>Please evaluate all messages sent by trustees to trustors in a trust game setting. Use the table below to provide your quantitative responses for each message.</p>
             </div>
 
-            <div className="survey-section">
-              <h3 style={{ color: '#4f46e5', marginBottom: '1rem' }}>Game Rules</h3>
-              <p>Trust games are common experimental games to study trust between individuals. The game involves two players: a <strong>trustor</strong> and a <strong>trustee</strong>.</p>
-              <p>The trustor makes the first move by choosing between two options: <strong>OUT</strong> or <strong>IN</strong>. If the trustor chooses <strong>OUT</strong>, the game ends immediately, and both players receive a modest, guaranteed payoff.</p>
-              <p>If the trustor chooses <strong>IN</strong>, the trustee faces a decision: whether to <strong>ROLL</strong> or <strong>DON'T ROLL</strong> a virtual dice.</p>
-              <p>If the trustee chooses <strong>ROLL</strong>, there is a high probability (e.g., 5 out of 6) that both players will receive a relatively high payoff. However, there is also a small chance (e.g., 1 out of 6) that the trustee will receive a higher payoff while the trustor receives nothing.</p>
-              <p>If the trustee chooses <strong>DON'T ROLL</strong>, the trustee secures the high payoff for themselves with certainty, and the trustor receives nothing.</p>
-              <p>Before the trustor makes their decision, the trustee can send a one-time, free-form message to the trustor. This message is non-binding and contains nothing that can be enforced.</p>
-              
-              <div className="diagram-container">
-                <img 
-                  src="/game_diag.png" 
-                  alt="Trust Game Diagram" 
-                />
-              </div>
-            </div>
-            
-            <div className="message-display">
-              <h4 style={{ color: '#1e293b', marginBottom: '1rem', fontSize: '1.125rem' }}>Message sent by trustee to trustor:</h4>
-              <p className="message-text">"{m?.message || 'No message available'}"</p>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Is the trustee making a commitment or promise to ROLL?</label>
-              <div className="radio-group">
-                <label className="radio-option">
-                  <input 
-                    type="radio" 
-                    name={`commitment_${m.id}`}
-                    value="explicit-promise"
-                    onChange={e=>handleChange(m.id,'commitment',e.target.value)}
-                  />
-                  <div className="radio-option-content">
-                    <div className="radio-option-title">Explicit Promise</div>
-                    <div className="radio-option-description">The message indicates a return or cooperative action</div>
-                  </div>
-                </label>
-                
-                <label className="radio-option">
-                  <input 
-                    type="radio" 
-                    name={`commitment_${m.id}`}
-                    value="explicit-no-promise"
-                    onChange={e=>handleChange(m.id,'commitment',e.target.value)}
-                  />
-                  <div className="radio-option-content">
-                    <div className="radio-option-title">Explicit 'No Promise'</div>
-                    <div className="radio-option-description">The message indicates a non-cooperative action</div>
-                  </div>
-                </label>
-                
-                <label className="radio-option">
-                  <input 
-                    type="radio" 
-                    name={`commitment_${m.id}`}
-                    value="implicit-suggestion"
-                    onChange={e=>handleChange(m.id,'commitment',e.target.value)}
-                  />
-                  <div className="radio-option-content">
-                    <div className="radio-option-title">Implicit Suggestion</div>
-                    <div className="radio-option-description">A hint or persuasive language implying trustworthy behavior</div>
-                  </div>
-                </label>
-                
-                <label className="radio-option">
-                  <input 
-                    type="radio" 
-                    name={`commitment_${m.id}`}
-                    value="no-commitment"
-                    onChange={e=>handleChange(m.id,'commitment',e.target.value)}
-                  />
-                  <div className="radio-option-content">
-                    <div className="radio-option-title">No Commitment</div>
-                    <div className="radio-option-description">The message does not imply any commitment to any future action</div>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">How much does the message signal a personal trait or characteristic of the trustee?</label>
-              <div className="range-container">
-                <input
-                  type="range"
-                  min="1"
-                  max="5"
-                  step="1"
-                  className="range-slider"
-                  defaultValue="3"
-                  onChange={e => handleChange(m.id, 'signaling', e.target.value)}
-                />
-                <div className="range-labels">
-                  <span>1</span>
-                  <span>2</span>
-                  <span>3</span>
-                  <span>4</span>
-                  <span>5</span>
-                </div>
-                <div className="range-descriptions">
-                  <span>Not at all</span>
-                  <span></span>
-                  <span>Neutral</span>
-                  <span></span>
-                  <span>Very much</span>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div className="range-value-indicator">
-                    {sliderValues[`${m.id}_signaling`] || '3'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Does the message convey emotions?</label>
-              <div className="radio-group">
-                <label className="radio-option">
-                  <input 
-                    type="radio" 
-                    name={`emotion_${m.id}`}
-                    value="neutral"
-                    onChange={e=>handleChange(m.id,'emotion',e.target.value)}
-                  />
-                  <div className="radio-option-content">
-                    <div className="radio-option-title">Neutral</div>
-                    <div className="radio-option-description">The message does not express any particular emotions</div>
-                  </div>
-                </label>
-                
-                <label className="radio-option">
-                  <input 
-                    type="radio" 
-                    name={`emotion_${m.id}`}
-                    value="negative"
-                    onChange={e=>handleChange(m.id,'emotion',e.target.value)}
-                  />
-                  <div className="radio-option-content">
-                    <div className="radio-option-title">Negative emotions</div>
-                    <div className="radio-option-description">The message expresses sadness, anger, fear, or other negative feelings</div>
-                  </div>
-                </label>
-                
-                <label className="radio-option">
-                  <input 
-                    type="radio" 
-                    name={`emotion_${m.id}`}
-                    value="positive"
-                    onChange={e=>handleChange(m.id,'emotion',e.target.value)}
-                  />
-                  <div className="radio-option-content">
-                    <div className="radio-option-title">Positive emotions</div>
-                    <div className="radio-option-description">The message expresses happiness, excitement, optimism, or other positive feelings</div>
-                  </div>
-                </label>
-              </div>
+            <div className="survey-table-container">
+              <table className="survey-table">
+                <thead>
+                  <tr>
+                    <th>Message</th>
+                    <th>Commitment/Promise</th>
+                    <th>Personal Signaling (1-5)</th>
+                    <th>Emotions</th>
+                    <th>ROLL Likelihood (0-100%)</th>
+                    <th>Guilt Level (1-5)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {messages.map((m, index) => (
+                    <tr key={m.id}>
+                      <td className="message-cell">
+                        "{m.message}"
+                      </td>
+                      
+                      {/* Commitment Radio Group */}
+                      <td className="input-cell">
+                        <div className={`table-radio-group ${interactedInputs[`${m.id}_commitment`] ? 'completed' : ''}`}>
+                          {[
+                            { value: 'explicit-promise', label: 'Explicit Promise' },
+                            { value: 'explicit-no-promise', label: 'Explicit No Promise' },
+                            { value: 'implicit-suggestion', label: 'Implicit Suggestion' },
+                            { value: 'no-commitment', label: 'No Commitment' }
+                          ].map(option => (
+                            <label key={option.value} className={`table-radio-option ${responses[m.id]?.commitment === option.value ? 'selected' : ''}`}>
+                              <input 
+                                type="radio" 
+                                name={`commitment_${m.id}`}
+                                value={option.value}
+                                onChange={e=>handleChange(m.id,'commitment',e.target.value)}
+                              />
+                              <span className="table-radio-label">{option.label}</span>
+                            </label>
+                          ))}
+                          {!interactedInputs[`${m.id}_commitment`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Signaling Slider */}
+                      <td className="input-cell">
+                        <div className={`table-range-container ${interactedInputs[`${m.id}_signaling`] ? 'completed' : ''}`}>
+                          <input
+                            type="range"
+                            min="0"
+                            max="5"
+                            step="1"
+                            className="table-range-slider"
+                            value={sliderValues[`${m.id}_signaling`] || '0'}
+                            onChange={e => handleChange(m.id, 'signaling', e.target.value)}
+                          />
+                          <div className="table-range-labels">
+                            <span>Not at all</span>
+                            <span>Very much</span>
+                          </div>
+                          <div className="table-range-value">
+                            {sliderValues[`${m.id}_signaling`] || '0'}
+                          </div>
+                          {!interactedInputs[`${m.id}_signaling`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Emotion Radio Group */}
+                      <td className="input-cell">
+                        <div className={`table-radio-group ${interactedInputs[`${m.id}_emotion`] ? 'completed' : ''}`}>
+                          {[
+                            { value: 'neutral', label: 'Neutral' },
+                            { value: 'negative', label: 'Negative' },
+                            { value: 'positive', label: 'Positive' }
+                          ].map(option => (
+                            <label key={option.value} className={`table-radio-option ${responses[m.id]?.emotion === option.value ? 'selected' : ''}`}>
+                              <input 
+                                type="radio" 
+                                name={`emotion_${m.id}`}
+                                value={option.value}
+                                onChange={e=>handleChange(m.id,'emotion',e.target.value)}
+                              />
+                              <span className="table-radio-label">{option.label}</span>
+                            </label>
+                          ))}
+                          {!interactedInputs[`${m.id}_emotion`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Prediction Slider */}
+                      <td className="input-cell">
+                        <div className={`table-range-container ${interactedInputs[`${m.id}_prediction`] ? 'completed' : ''}`}>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="100" 
+                            step="1"
+                            className="table-range-slider" 
+                            value={sliderValues[`${m.id}_prediction`] || '0'}
+                            onChange={e=>handleChange(m.id,'prediction',e.target.value)} 
+                          />
+                          <div className="table-range-labels">
+                            <span>Very unlikely</span>
+                            <span>Very likely</span>
+                          </div>
+                          <div className="table-range-value">
+                            {sliderValues[`${m.id}_prediction`] || '0'}%
+                          </div>
+                          {!interactedInputs[`${m.id}_prediction`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Guilt Slider */}
+                      <td className="input-cell">
+                        <div className={`table-range-container ${interactedInputs[`${m.id}_guilt`] ? 'completed' : ''}`}>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="5" 
+                            className="table-range-slider" 
+                            value={sliderValues[`${m.id}_guilt`] || '0'}
+                            onChange={e=>handleChange(m.id,'guilt',e.target.value)} 
+                          />
+                          <div className="table-range-labels">
+                            <span>Not guilty</span>
+                            <span>Very guilty</span>
+                          </div>
+                          <div className="table-range-value">
+                            {sliderValues[`${m.id}_guilt`] || '0'}
+                          </div>
+                          {!interactedInputs[`${m.id}_guilt`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Imagine you received this message, how likely is it that the trustee who sent this message will choose ROLL?</label>
-              <div className="range-container">
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  step="1"
-                  className="range-slider" 
-                  defaultValue="50"
-                  onChange={e=>handleChange(m.id,'prediction',e.target.value)} 
-                />
-                <div className="range-labels">
-                  <span>0%</span>
-                  <span>25%</span>
-                  <span>50%</span>
-                  <span>75%</span>
-                  <span>100%</span>
-                </div>
-                <div className="range-descriptions">
-                  <span>Very unlikely</span>
-                  <span></span>
-                  <span>Neutral</span>
-                  <span></span>
-                  <span>Very likely</span>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div className="range-value-indicator">
-                    {sliderValues[`${m.id}_prediction`] || '50'}%
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Imagine you are the trustee, how guilty would you feel to choose DON'T ROLL after sending this message?</label>
-              <div className="range-container">
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="5" 
-                  className="range-slider" 
-                  defaultValue="3"
-                  onChange={e=>handleChange(m.id,'guilt',e.target.value)} 
-                />
-                <div className="range-labels">
-                  <span>1</span>
-                  <span>2</span>
-                  <span>3</span>
-                  <span>4</span>
-                  <span>5</span>
-                </div>
-                <div className="range-descriptions">
-                  <span>Not guilty</span>
-                  <span></span>
-                  <span>Neutral</span>
-                  <span></span>
-                  <span>Very guilty</span>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div className="range-value-indicator">
-                    {sliderValues[`${m.id}_guilt`] || '3'}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-              <button className="btn btn-success" onClick={nextQuant}>
-                {quantIndex < messages.length - 1 ? 'Next Question →' : 'Continue to Qualitative Survey →'}
+            <div className="submit-section">
+              <button className="btn btn-primary btn-lg" onClick={handleNextPage}>
+                Continue to Qualitative Questions →
               </button>
             </div>
           </div>
@@ -449,71 +438,112 @@ function App() {
     );
   }
 
-  // Page 3: Qualitative
+  // Page 3: Second Table Survey (Qualitative)
   if(step===2 && messages.length) {
-    const m = messages[qualIndex];
-    const progress = ((qualIndex + 1) / messages.length) * 100;
     return (
       <div className="survey-container slide-in">
-        <div className="survey-card" style={{ maxWidth: '900px' }}>
+        <div className="survey-card" style={{ maxWidth: '1400px', width: '95vw' }}>
           <div className="survey-header">
-            <h2 className="survey-title" style={{ fontSize: '2rem' }}>Qualitative Survey</h2>
-            <p className="survey-subtitle">Question {qualIndex+1} of {messages.length}</p>
+            <h2 className="survey-title" style={{ fontSize: '2rem' }}>Survey Table - Page 2</h2>
+            <p className="survey-subtitle">Qualitative Evaluation: Provide detailed responses for each message</p>
           </div>
           
           <div className="survey-content">
-            <div className="progress-indicator">
-              <div className="progress-bar" style={{ width: `${progress}%` }}></div>
-            </div>
-            
-            <div className="message-display">
-              <h4 style={{ color: '#1e293b', marginBottom: '1rem', fontSize: '1.125rem' }}>Message from trustee:</h4>
-              <p className="message-text">"{m.message}"</p>
+            <div className="instructions">
+              <h3>Instructions</h3>
+              <p>Now please provide qualitative insights about each message. Use the text areas below to elaborate on your thoughts and analysis.</p>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Perspective trustor – social connection</label>
-              <textarea 
-                className="form-textarea" 
-                rows={4} 
-                placeholder="How might this message affect the social connection between trustor and trustee? Please elaborate on your thoughts..."
-                onChange={e=>handleChange(m.id,'socialConnection',e.target.value)} 
-              />
+            <div className="survey-table-container">
+              <table className="survey-table">
+                <thead>
+                  <tr>
+                    <th>Message</th>
+                    <th>Social Connection</th>
+                    <th>Trustee Expectations</th>
+                    <th>Influence on Trustor</th>
+                    <th>Guilt Clues</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {messages.map((m, index) => (
+                    <tr key={m.id}>
+                      <td className="message-cell">
+                        "{m.message}"
+                      </td>
+                      
+                      {/* Social Connection Textarea */}
+                      <td className="input-cell">
+                        <div className={`textarea-container ${interactedInputs[`${m.id}_socialConnection`] ? 'completed' : ''}`}>
+                          <textarea 
+                            className="form-textarea" 
+                            rows={4} 
+                            style={{ width: '100%', minWidth: '250px', fontSize: '0.875rem' }}
+                            placeholder="How might this message affect the social connection between trustor and trustee? Please elaborate on your thoughts..."
+                            onChange={e=>handleChange(m.id,'socialConnection',e.target.value)} 
+                          />
+                          {!interactedInputs[`${m.id}_socialConnection`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Trustee Expectations Textarea */}
+                      <td className="input-cell">
+                        <div className={`textarea-container ${interactedInputs[`${m.id}_trusteeExpectations`] ? 'completed' : ''}`}>
+                          <textarea 
+                            className="form-textarea" 
+                            rows={4} 
+                            style={{ width: '100%', minWidth: '250px', fontSize: '0.875rem' }}
+                            placeholder="What do you think the trustee expects from sending this message? What might be their underlying motivations?"
+                            onChange={e=>handleChange(m.id,'trusteeExpectations',e.target.value)} 
+                          />
+                          {!interactedInputs[`${m.id}_trusteeExpectations`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Influence Behavior Textarea */}
+                      <td className="input-cell">
+                        <div className={`textarea-container ${interactedInputs[`${m.id}_influenceBehavior`] ? 'completed' : ''}`}>
+                          <textarea 
+                            className="form-textarea" 
+                            rows={4} 
+                            style={{ width: '100%', minWidth: '250px', fontSize: '0.875rem' }}
+                            placeholder="How might this message influence the trustor's behavior and decision-making? What psychological factors come into play?"
+                            onChange={e=>handleChange(m.id,'influenceBehavior',e.target.value)} 
+                          />
+                          {!interactedInputs[`${m.id}_influenceBehavior`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                      
+                      {/* Guilt Clues Textarea */}
+                      <td className="input-cell">
+                        <div className={`textarea-container ${interactedInputs[`${m.id}_guiltClues`] ? 'completed' : ''}`}>
+                          <textarea 
+                            className="form-textarea" 
+                            rows={4} 
+                            style={{ width: '100%', minWidth: '250px', fontSize: '0.875rem' }}
+                            placeholder="What elements in this message might induce guilt if the trustee doesn't follow through? Analyze the emotional undertones..."
+                            onChange={e=>handleChange(m.id,'guiltClues',e.target.value)} 
+                          />
+                          {!interactedInputs[`${m.id}_guiltClues`] && (
+                            <div className="required-indicator">* Required</div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Trustee expectations</label>
-              <textarea 
-                className="form-textarea" 
-                rows={4} 
-                placeholder="What do you think the trustee expects from sending this message? What might be their underlying motivations?"
-                onChange={e=>handleChange(m.id,'trusteeExpectations',e.target.value)} 
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Influence on trustor</label>
-              <textarea 
-                className="form-textarea" 
-                rows={4} 
-                placeholder="How might this message influence the trustor's behavior and decision-making? What psychological factors come into play?"
-                onChange={e=>handleChange(m.id,'influenceBehavior',e.target.value)} 
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Guilt clues</label>
-              <textarea 
-                className="form-textarea" 
-                rows={4} 
-                placeholder="What elements in this message might induce guilt if the trustee doesn't follow through? Analyze the emotional undertones..."
-                onChange={e=>handleChange(m.id,'guiltClues',e.target.value)} 
-              />
-            </div>
-
-            <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-              <button className="btn btn-success" onClick={nextQual}>
-                {qualIndex < messages.length - 1 ? 'Next Question →' : 'Complete Survey →'}
+            <div className="submit-section">
+              <button className="btn btn-success btn-lg" onClick={handleSubmit}>
+                Complete Survey & Download Results
               </button>
             </div>
           </div>

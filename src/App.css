@@ -59,6 +59,14 @@ body {
 /* Content styles */
 .survey-content {
   padding: 2rem;
+  position: relative;
+}
+
+.survey-content .survey-table-container {
+  /* Ensure the table container can handle sticky positioning properly */
+  position: relative;
+  max-height: 70vh; /* Limit height to enable vertical scrolling with sticky headers */
+  overflow-y: auto;
 }
 
 .survey-section {
@@ -497,4 +505,265 @@ body {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* Survey table styles */
+.survey-table-container {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 1rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  /* Always show horizontal scrollbar */
+  scrollbar-gutter: stable;
+  /* Ensure scrollbar is always visible */
+  min-height: 50px;
+}
+
+.survey-table-container::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+
+.survey-table-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.survey-table-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 6px;
+}
+
+.survey-table-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #3730a3 0%, #6b21a8 100%);
+}
+
+.survey-table {
+  width: 100%;
+  min-width: 1200px; /* Ensure table has minimum width to trigger horizontal scroll */
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.survey-table th,
+.survey-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+}
+
+.survey-table th {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-width: 200px;
+  /* Add shadow to distinguish sticky header */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.survey-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 30; /* Higher z-index for the sticky corner */
+  background: linear-gradient(135deg, #3730a3 0%, #6b21a8 100%);
+}
+
+.survey-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: white;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+  font-weight: 500;
+}
+
+.survey-table tr:nth-child(even) td:first-child {
+  background: #f9fafb;
+}
+
+.survey-table tr:hover td:first-child {
+  background: #f0f2ff;
+}
+
+.survey-table tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.survey-table tr:hover {
+  background: #f0f2ff;
+}
+
+.message-cell {
+  max-width: 300px;
+  min-width: 250px;
+  word-wrap: break-word;
+  font-style: italic;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.input-cell {
+  min-width: 200px;
+  max-width: 250px;
+}
+
+.table-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.table-radio-option {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.875rem;
+}
+
+.table-radio-option:hover {
+  border-color: #4f46e5;
+  background: #f8f9ff;
+}
+
+.table-radio-option.selected {
+  border-color: #4f46e5;
+  background: #f0f2ff;
+}
+
+.table-radio-option input[type="radio"] {
+  margin-right: 0.5rem;
+  width: 16px;
+  height: 16px;
+  accent-color: #4f46e5;
+}
+
+.table-radio-label {
+  font-weight: 500;
+  color: #374151;
+}
+
+.table-range-container {
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.table-range-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.table-range-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+}
+
+.table-range-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+}
+
+.table-range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.table-range-value {
+  text-align: center;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  display: inline-block;
+  min-width: 40px;
+}
+
+.submit-section {
+  text-align: center;
+  margin-top: 2rem;
+  padding: 2rem;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Required field indicators */
+.table-radio-group:not(.completed) {
+  border-left: 3px solid #ef4444;
+  padding-left: 0.75rem;
+}
+
+.table-range-container:not(.completed) {
+  border-left: 3px solid #ef4444;
+  padding-left: 0.75rem;
+}
+
+.form-textarea:not(.completed) {
+  border-left: 3px solid #ef4444;
+}
+
+.table-radio-group.completed {
+  border-left: 3px solid #22c55e;
+  padding-left: 0.75rem;
+}
+
+.table-range-container.completed {
+  border-left: 3px solid #22c55e;
+  padding-left: 0.75rem;
+}
+
+.form-textarea.completed {
+  border-left: 3px solid #22c55e;
+}
+
+.required-indicator {
+  color: #ef4444;
+  font-weight: 600;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.completed-indicator {
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
 }
