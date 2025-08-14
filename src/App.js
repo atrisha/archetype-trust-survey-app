@@ -2,163 +2,135 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
-// Parse CSV string into objects - Simplified and more robust
-const parseCSV = csv => {
-  console.log('Raw CSV data:', csv.substring(0, 200) + '...');
-  const lines = csv.trim().split('\n');
-  console.log('Number of lines:', lines.length);
-  
-  if (lines.length === 0) return [];
-  
-  const headers = ['generated', 'message', 'in', 'roll']; // Fixed headers
-  console.log('Using headers:', headers);
-  
-  const parsed = lines.slice(1).map((line, index) => {
-    console.log(`Processing line ${index + 1}:`, line);
-    
-    // Simple CSV parsing - split by comma but handle quoted strings
-    const values = [];
-    let current = '';
-    let inQuotes = false;
-    let i = 0;
-    
-    while (i < line.length) {
-      const char = line[i];
-      
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          // Double quote escape
-          current += '"';
-          i += 2;
-        } else {
-          // Toggle quotes
-          inQuotes = !inQuotes;
-          i++;
-        }
-      } else if (char === ',' && !inQuotes) {
-        // Field separator
-        values.push(current.trim());
-        current = '';
-        i++;
-      } else {
-        current += char;
-        i++;
-      }
-    }
-    
-    // Add the last field
-    values.push(current.trim());
-    
-    console.log('Parsed values:', values);
-    
-    // Ensure we have at least 4 values
-    while (values.length < 4) {
-      values.push('');
-    }
-    
-    const obj = {};
-    headers.forEach((h, idx) => {
-      let value = values[idx] || '';
-      
-      // Handle N/A values
-      if (value === 'N/A' || value === '') {
-        obj[h] = null;
-      } else if (h === 'generated' || h === 'in' || h === 'roll') {
-        // Parse integers
-        obj[h] = parseInt(value, 10) || 0;
-      } else {
-        // String values
-        obj[h] = value;
-      }
-    });
-    
-    console.log('Parsed object:', obj);
-    
-    // Filter out entries with empty messages
-    if (!obj.message || obj.message.trim() === '') {
-      console.log('Skipping entry with empty message');
-      return null;
-    }
-    
-    return obj;
-  }).filter(obj => obj !== null);
-  
-  console.log('Final parsed data:', parsed);
-  return parsed;
-};
-
-// Export JSON array to CSV and trigger download
-const exportToCSV = data => {
-  if (!data.length) return;
-  const headers = Object.keys(data[0]);
-  const rows = [headers.join(',')];
-  data.forEach(row => {
-    const line = headers.map(h => `"${(row[h] ?? '').toString().replace(/"/g,'""')}"`).join(',');
-    rows.push(line);
-  });
-  const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'survey_responses.csv';
-  link.click();
-};
-
 function App() {
   const [step, setStep] = useState(0);
-  const [messages, setMessages] = useState([]);
+  const [quantitativeMessages, setQuantitativeMessages] = useState([]);
+  const [qualitativeMessages, setQualitativeMessages] = useState([]);
   const [responses, setResponses] = useState({});
   const [sliderValues, setSliderValues] = useState({});
   const [interactedInputs, setInteractedInputs] = useState({});
+  const [sessionId, setSessionId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Time tracking
+  const [startTime, setStartTime] = useState(null);
+  const [responseStartTimes, setResponseStartTimes] = useState({});
+  const [responseTimes, setResponseTimes] = useState({});
 
   useEffect(() => {
-    console.log('Fetching data_clean.csv...');
-    fetch('/data_clean.csv')
-      .then(res => {
-        console.log('Fetch response:', res.status, res.statusText);
-        return res.text();
-      })
-      .then(csv=>{
-        console.log('CSV text received, length:', csv.length);
-        const all = parseCSV(csv);
-        console.log('All parsed messages:', all.length);
-        const g0 = all.filter(m=>m.generated===0);
-        const g1 = all.filter(m=>m.generated===1);
-        console.log('Generated=0 messages:', g0.length);
-        console.log('Generated=1 messages:', g1.length);
-        const shuffle = arr=>arr.sort(()=>0.5-Math.random());
-        const sample = [...shuffle(g0).slice(0,5), ...shuffle(g1).slice(0,5)];
-        console.log('Sample messages:', sample);
-        const finalMessages = shuffle(sample).map((m,i)=>({ ...m, id:`msg_${i}` }));
-        console.log('Final messages with IDs:', finalMessages);
-        setMessages(finalMessages);
+    async function initializeSurvey() {
+      try {
+        setIsLoading(true);
+        setError(null);
         
-        // Initialize slider values to 0
+        // Create a new survey session
+        console.log('Creating survey session...');
+        const sessionResponse = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            participantId: null // You can add participant identification later
+          })
+        });
+        
+        if (!sessionResponse.ok) {
+          throw new Error('Failed to create survey session');
+        }
+        
+        const session = await sessionResponse.json();
+        setSessionId(session.id);
+        console.log('Survey session created:', session.id);
+        
+        // Fetch message samples from API
+        console.log('Fetching message samples...');
+        
+        // Fetch 10 messages for quantitative questions
+        const quantitativeResponse = await fetch('/api/messages/sample?size=10');
+        if (!quantitativeResponse.ok) {
+          throw new Error('Failed to fetch quantitative messages');
+        }
+        const quantitativeData = await quantitativeResponse.json();
+        console.log('Received quantitative messages:', quantitativeData);
+        setQuantitativeMessages(quantitativeData);
+        
+        // Fetch 4 messages for qualitative questions
+        const qualitativeResponse = await fetch('/api/messages/sample?size=4');
+        if (!qualitativeResponse.ok) {
+          throw new Error('Failed to fetch qualitative messages');
+        }
+        const qualitativeData = await qualitativeResponse.json();
+        console.log('Received qualitative messages:', qualitativeData);
+        setQualitativeMessages(qualitativeData);
+        
+        // Initialize slider values to 0 for quantitative messages
         const initialValues = {};
-        finalMessages.forEach(msg => {
+        quantitativeData.forEach(msg => {
           initialValues[`${msg.id}_signaling`] = '0';
           initialValues[`${msg.id}_prediction`] = '0';
           initialValues[`${msg.id}_guilt`] = '0';
         });
         setSliderValues(initialValues);
-      })
-      .catch(error => {
-        console.error('Error fetching or parsing CSV:', error);
-      });
-  },[]);
+        
+      } catch (error) {
+        console.error('Error initializing survey:', error);
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    initializeSurvey();
+  }, []);
+
+  // Helper function to track response start time
+  const trackResponseStart = useCallback((inputKey) => {
+    setResponseStartTimes(prev => {
+      if (!prev[inputKey]) {
+        return {
+          ...prev,
+          [inputKey]: Date.now()
+        };
+      }
+      return prev;
+    });
+  }, []);
+
+  // Helper function to record response time when user completes a response
+  const recordResponseTime = useCallback((inputKey) => {
+    setResponseStartTimes(prev => {
+      if (prev[inputKey]) {
+        const responseTime = Date.now() - prev[inputKey];
+        setResponseTimes(prevTimes => ({
+          ...prevTimes,
+          [inputKey]: responseTime
+        }));
+      }
+      return prev;
+    });
+  }, []);
 
   const handleChange = useCallback((id,key,value) => {
+    const inputKey = `${id}_${key}`;
+    
+    // Track when user starts interacting with this response
+    trackResponseStart(inputKey);
+    
     setResponses(prev=>({ ...prev, [id]:{ ...(prev[id]||{}), [key]:value }}));
     // Track slider values for display
     if (key === 'prediction' || key === 'signaling' || key === 'guilt') {
       setSliderValues(prev=>({ ...prev, [`${id}_${key}`]: value }));
     }
-    // Mark this input as interacted with
+    // Mark this input as interacted with and record response time
     setInteractedInputs(prev=>({ ...prev, [`${id}_${key}`]: true }));
-  },[]);
+    recordResponseTime(inputKey);
+  }, [trackResponseStart, recordResponseTime]);
 
   const validateQuantitativePage = () => {
     const requiredFields = [];
-    messages.forEach(msg => {
+    quantitativeMessages.forEach(msg => {
       requiredFields.push(
         `${msg.id}_commitment`,
         `${msg.id}_signaling`,
@@ -174,7 +146,7 @@ function App() {
 
   const validateQualitativePage = () => {
     const requiredFields = [];
-    messages.forEach(msg => {
+    qualitativeMessages.forEach(msg => {
       requiredFields.push(
         `${msg.id}_socialConnection`,
         `${msg.id}_trusteeExpectations`,
@@ -195,20 +167,83 @@ function App() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateQualitativePage()) {
-      const out = messages.map(m=>({ 
-        id: m.id, 
-        message: m.message, 
-        generated: m.generated,
-        ...responses[m.id] 
-      }));
-      exportToCSV(out);
-      setStep(3);
+      try {
+        setIsLoading(true);
+        
+        console.log('Submitting survey responses...');
+        const totalSessionTime = startTime ? Date.now() - startTime : null;
+        
+        const submitResponse = await fetch(`/api/sessions/${sessionId}/responses`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            responses,
+            responseTimes, // Include response times for each input
+            totalSessionTime, // Total time spent in survey
+            quantitativeMessages, // Include quantitative message metadata 
+            qualitativeMessages   // Include qualitative message metadata
+          })
+        });
+        
+        if (!submitResponse.ok) {
+          throw new Error('Failed to submit survey responses');
+        }
+        
+        const result = await submitResponse.json();
+        console.log('Survey responses submitted successfully:', result);
+        
+        setStep(3); // Go to thank you page
+        
+      } catch (error) {
+        console.error('Error submitting survey:', error);
+        alert('There was an error submitting your responses. Please try again or contact support.');
+      } finally {
+        setIsLoading(false);
+      }
     } else {
       alert('Please complete all text fields on this page before submitting. Make sure you have provided responses for all qualitative questions.');
     }
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="survey-container">
+        <div className="survey-card" style={{ maxWidth: '500px', textAlign: 'center' }}>
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <h3>Loading Survey...</h3>
+            <p>Please wait while we prepare your survey questions.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="survey-container">
+        <div className="survey-card" style={{ maxWidth: '500px', textAlign: 'center' }}>
+          <div className="survey-content">
+            <h3 style={{ color: '#ef4444' }}>Error Loading Survey</h3>
+            <p>We're sorry, but there was an error loading the survey: {error}</p>
+            <p>Please refresh the page or try again later.</p>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => window.location.reload()}
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Page 1: Introduction
   if(step===0) return (
@@ -255,7 +290,10 @@ function App() {
           </div>
           
           <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-            <button className="btn btn-primary" onClick={()=>setStep(1)}>
+            <button className="btn btn-primary" onClick={() => {
+              setStartTime(Date.now());
+              setStep(1);
+            }}>
               Start Survey →
             </button>
           </div>
@@ -265,7 +303,7 @@ function App() {
   );
 
   // Page 2: First Table Survey (Quantitative)
-  if(step===1 && messages.length) {
+  if(step===1 && quantitativeMessages.length) {
     return (
       <div className="survey-container slide-in">
         <div className="survey-card" style={{ maxWidth: '1200px', width: '95vw' }}>
@@ -293,7 +331,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {messages.map((m, index) => (
+                  {quantitativeMessages.map((m, index) => (
                     <tr key={m.id}>
                       <td className="message-cell">
                         "{m.message}"
@@ -439,7 +477,7 @@ function App() {
   }
 
   // Page 3: Second Table Survey (Qualitative)
-  if(step===2 && messages.length) {
+  if(step===2 && qualitativeMessages.length) {
     return (
       <div className="survey-container slide-in">
         <div className="survey-card" style={{ maxWidth: '1400px', width: '95vw' }}>
@@ -466,7 +504,7 @@ function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {messages.map((m, index) => (
+                  {qualitativeMessages.map((m, index) => (
                     <tr key={m.id}>
                       <td className="message-cell">
                         "{m.message}"
@@ -543,7 +581,7 @@ function App() {
 
             <div className="submit-section">
               <button className="btn btn-success btn-lg" onClick={handleSubmit}>
-                Complete Survey & Download Results
+                Submit Survey
               </button>
             </div>
           </div>
@@ -565,9 +603,14 @@ function App() {
             </p>
             <div className="instructions" style={{ textAlign: 'left' }}>
               <h3>What happens next?</h3>
-              <p>Your responses have been automatically downloaded as a CSV file to your computer.</p>
+              <p>Your responses have been securely saved to our research database.</p>
               <p>Your anonymized data will contribute to important research on trust, communication, and human behavior in economic games.</p>
               <p>The insights from this study will help advance our understanding of how language influences trust and cooperation.</p>
+              {sessionId && (
+                <p style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '1rem' }}>
+                  Session ID: <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>{sessionId}</code>
+                </p>
+              )}
             </div>
             <div style={{ marginTop: '2rem' }}>
               <p style={{ fontSize: '0.9rem', color: '#9ca3af', fontStyle: 'italic' }}>
@@ -581,7 +624,7 @@ function App() {
   );
 
   // Debug case: Step 1 but no messages
-  if(step === 1 && messages.length === 0) {
+  if(step === 1 && quantitativeMessages.length === 0) {
     console.log('Step 1 reached but no messages loaded');
     return (
       <div className="survey-container">
@@ -592,7 +635,7 @@ function App() {
               <h2 style={{ color: '#4f46e5', marginBottom: '1rem' }}>Loading Survey Data...</h2>
               <p style={{ color: '#64748b' }}>Please wait while we prepare your survey questions.</p>
               <div style={{ marginTop: '2rem', fontSize: '0.875rem', color: '#9ca3af' }}>
-                <p>Debug info: Step = {step}, Messages = {messages.length}</p>
+                <p>Debug info: Step = {step}, Quantitative = {quantitativeMessages.length}, Qualitative = {qualitativeMessages.length}</p>
               </div>
             </div>
           </div>
