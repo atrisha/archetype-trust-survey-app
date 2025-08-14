@@ -1,19 +1,7 @@
 {
-  "name": "trust-survey-app-full",
-  "version": "1.0.0",
-  "description": "Trust Survey Application with React frontend and Node.js backend",
-  "main": "server/server.js",
-  "scripts": {
-    "build": "npm install && npm run build:client && npm run build:server",
-    "build:client": "npm run build",
-    "build:server": "npm install --prefix server",
-    "start": "node server/server.js",
-    "heroku-postbuild": "npm run build"
-  },
-  "engines": {
-    "node": "18.x",
-    "npm": "9.x"
-  },
+  "name": "trust-survey-app",
+  "version": "0.1.0",
+  "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.4",
@@ -23,6 +11,18 @@
     "react-dom": "^19.1.1",
     "react-scripts": "^5.0.1",
     "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
   },
   "browserslist": {
     "production": [
@@ -35,6 +35,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.11"
   },
   "proxy": "http://localhost:5001"
 }

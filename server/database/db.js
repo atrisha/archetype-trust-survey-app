@@ -1,26 +1,32 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Database connection pool
+// Configure connection for Heroku or local development
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'trust_survey',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD,
+  // Heroku provides DATABASE_URL, fallback to individual environment variables
+  connectionString: process.env.DATABASE_URL || undefined,
+  host: process.env.DATABASE_URL ? undefined : (process.env.DB_HOST || 'localhost'),
+  port: process.env.DATABASE_URL ? undefined : (process.env.DB_PORT || 5432),
+  database: process.env.DATABASE_URL ? undefined : (process.env.DB_NAME || 'trust_survey'),
+  user: process.env.DATABASE_URL ? undefined : (process.env.DB_USER || 'postgres'),
+  password: process.env.DATABASE_URL ? undefined : process.env.DB_PASSWORD,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 10000, // Increased for Heroku
 });
 
 // Test database connection
-pool.on('connect', () => {
-  console.log('Connected to PostgreSQL database');
+pool.on('connect', (client) => {
+  console.log(`Connected to PostgreSQL database (${process.env.NODE_ENV || 'development'})`);
 });
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  // Don't exit in production, let Heroku restart
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(-1);
+  }
 });
 
 // Query helper function
