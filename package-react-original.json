@@ -4,8 +4,9 @@
   "description": "Trust Survey Application with React frontend and Node.js backend",
   "main": "server/server.js",
   "scripts": {
-    "build": "npm run build:client",
-    "build:client": "react-scripts build",
+    "build": "npm install && npm run build:client && npm run build:server",
+    "build:client": "npm run build",
+    "build:server": "npm install --prefix server",
     "start": "node server/server.js",
     "heroku-postbuild": "npm run build"
   },
@@ -34,5 +35,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "proxy": "http://localhost:5001"
 }
