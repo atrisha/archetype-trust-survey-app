@@ -58,7 +58,7 @@ body {
 
 /* Content styles */
 .survey-content {
-  padding: 2rem;
+  padding: 1.5rem; /* Reduced padding for table views */
   position: relative;
 }
 
@@ -71,6 +71,21 @@ body {
 
 .survey-section {
   margin-bottom: 2rem;
+}
+
+/* Compact game rules section for table pages */
+.survey-content .survey-section:last-of-type {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #fafafa;
+  border-radius: 8px;
+  border-left: 4px solid #4f46e5;
+}
+
+.survey-content .survey-section:last-of-type p {
+  margin-bottom: 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 /* Form elements */
@@ -290,6 +305,68 @@ body {
   box-shadow: 0 8px 25px 0 rgba(16, 185, 129, 0.4);
 }
 
+.btn-danger {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  box-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.3);
+  border: 2px solid transparent;
+  font-size: 0.9rem; /* Slightly smaller by default */
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px 0 rgba(220, 38, 38, 0.4);
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+}
+
+/* Small variant for quit button */
+.btn-danger.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Quit button positioning - inline with navigation */
+.navigation-with-quit {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  gap: 1rem;
+}
+
+.quit-button-container {
+  display: flex;
+}
+
+/* For landing page - center the main button, quit on the side */
+.navigation-with-quit.landing-nav {
+  justify-content: center;
+  position: relative;
+}
+
+.navigation-with-quit.landing-nav .quit-button-container {
+  position: absolute;
+  right: 0;
+}
+
+/* Responsive positioning for smaller screens */
+@media (max-width: 768px) {
+  .navigation-with-quit {
+    flex-direction: column-reverse;
+    gap: 1rem;
+  }
+  
+  .navigation-with-quit.landing-nav {
+    flex-direction: column-reverse;
+  }
+  
+  .navigation-with-quit.landing-nav .quit-button-container {
+    position: relative;
+    right: auto;
+  }
+}
+
 /* Navigation buttons */
 .btn-nav {
   display: flex;
@@ -350,11 +427,14 @@ body {
 /* Game diagram container */
 .diagram-container {
   text-align: center;
-  margin: 2rem 0;
+  margin: 1.5rem 0; /* Reduced margin for table page */
   padding: 1rem;
   background: #f8fafc;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+  max-width: 600px; /* Limit width to prevent it from being too wide on the broad canvas */
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .diagram-container img {
@@ -512,7 +592,7 @@ body {
   width: 100%;
   overflow-x: auto;
   overflow-y: visible;
-  padding: 1rem;
+  padding: 0.5rem; /* Reduced padding for more table space */
   border-radius: 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -543,7 +623,7 @@ body {
 
 .survey-table {
   width: 100%;
-  min-width: 1200px; /* Ensure table has minimum width to trigger horizontal scroll */
+  min-width: 1400px; /* Increased minimum width for better table layout */
   border-collapse: separate;
   border-spacing: 0;
   background: white;
@@ -607,8 +687,8 @@ body {
 }
 
 .message-cell {
-  max-width: 300px;
-  min-width: 250px;
+  max-width: 350px; /* Increased width for better message display */
+  min-width: 280px; /* Increased minimum width */
   word-wrap: break-word;
   font-style: italic;
   color: #1e293b;
@@ -616,8 +696,8 @@ body {
 }
 
 .input-cell {
-  min-width: 200px;
-  max-width: 250px;
+  min-width: 220px; /* Slightly increased for better input spacing */
+  max-width: 280px;
 }
 
 .table-radio-group {
@@ -766,4 +846,35 @@ body {
   font-weight: 600;
   font-size: 0.75rem;
   margin-top: 0.25rem;
+}
+
+/* Responsive adjustments for larger screens */
+@media (min-width: 1200px) {
+  .survey-container {
+    padding: 1rem 0.5rem; /* Reduced padding for more table space */
+  }
+  
+  .survey-card {
+    /* Allow the card to use more space on larger screens */
+    max-width: none !important;
+  }
+  
+  .survey-table {
+    min-width: 1500px; /* Even more space on large screens */
+  }
+  
+  .message-cell {
+    max-width: 400px; /* More space for messages on large screens */
+  }
+}
+
+@media (min-width: 1600px) {
+  .survey-table {
+    min-width: 1600px; /* Full utilization of ultra-wide screens */
+  }
+  
+  .input-cell {
+    min-width: 250px;
+    max-width: 320px;
+  }
 }

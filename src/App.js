@@ -12,6 +12,7 @@ function App() {
   const [sessionId, setSessionId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isQuitting, setIsQuitting] = useState(false);
   
   // Time tracking
   const [startTime, setStartTime] = useState(null);
@@ -209,6 +210,33 @@ function App() {
     }
   };
 
+  const handleQuitStudy = () => {
+    if (window.confirm('Are you sure you want to quit the study?\n\nYour progress will not be saved and you will not be able to return to complete the survey.\n\nClick "OK" to quit or "Cancel" to continue.')) {
+      setIsQuitting(true);
+      // You could optionally send a quit notification to the server here
+      // Reset the app or redirect
+      setTimeout(() => {
+        window.location.href = 'about:blank'; // This will show a blank page
+      }, 2000); // Show quit message for 2 seconds before redirecting
+    }
+  };
+
+  // Quit state
+  if (isQuitting) {
+    return (
+      <div className="app">
+        <div className="survey-card">
+          <h1>Study Exited</h1>
+          <div className="thank-you-message">
+            <p>Thank you for your time and interest in this research study.</p>
+            <p>You have successfully exited the survey. Your session has been terminated.</p>
+            <p>If you have any questions about this research, please contact the study coordinator.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Loading state
   if (isLoading) {
     return (
@@ -255,47 +283,114 @@ function App() {
         </div>
         <div className="survey-content">
           <div className="instructions">
-            <h3>Welcome, Dear Participant!</h3>
-            <p>Thank you for taking part in our survey about "Generating qualitative data."</p>
-            <p>This survey is designed to understand the role of communication in a trust game. It is part of a project on how large language models can be used to simulate human behavior in games.</p>
-            <p>The survey is presented in a table format where you can evaluate all messages at once across different dimensions.</p>
-            <p><strong>Privacy & Ethics:</strong> All answers are voluntary and you can leave the survey at any point. The answers are stored anonymously and under General Data Protection Regulations (GDPR). Moreover, responses will be used for academic purposes only.</p>
-          </div>
-          
-          <div className="survey-section">
-            <h3 style={{ color: '#4f46e5', marginBottom: '1rem' }}>Research Team</h3>
-            <ul className="team-list">
-              <li>Resource Economics Group, Humboldt‑Universität Berlin</li>
-              <li>Arizona State University</li>
-              <li>Institute for Advanced Studies (IHS), Vienna</li>
-              <li>Western University, Canada</li>
-            </ul>
-          </div>
-
-          <div className="survey-section">
-            <h3 style={{ color: '#4f46e5', marginBottom: '1rem' }}>Game Rules</h3>
-            <p>Trust games are common experimental games to study trust between individuals. The game involves two players: a <strong>trustor</strong> and a <strong>trustee</strong>.</p>
-            <p>The trustor makes the first move by choosing between two options: <strong>OUT</strong> or <strong>IN</strong>. If the trustor chooses <strong>OUT</strong>, the game ends immediately, and both players receive a modest, guaranteed payoff.</p>
-            <p>If the trustor chooses <strong>IN</strong>, the trustee faces a decision: whether to <strong>ROLL</strong> or <strong>DON'T ROLL</strong> a virtual dice.</p>
-            <p>If the trustee chooses <strong>ROLL</strong>, there is a high probability (e.g., 5 out of 6) that both players will receive a relatively high payoff. However, there is also a small chance (e.g., 1 out of 6) that the trustee will receive a higher payoff while the trustor receives nothing.</p>
-            <p>If the trustee chooses <strong>DON'T ROLL</strong>, the trustee secures the high payoff for themselves with certainty, and the trustor receives nothing.</p>
-            <p>Before the trustor makes their decision, the trustee can send a one-time, free-form message to the trustor. This message is non-binding and contains nothing that can be enforced.</p>
+            <h3>Letter of Information and Consent</h3>
+            <h4>Project Title: Evaluating Large Language Model (LLM) Communication in Strategic Games</h4>
             
-            <div className="diagram-container">
-              <img 
-                src="/game_diag.png" 
-                alt="Trust Game Diagram" 
-              />
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>Principal Investigators:</h4>
+              <ul style={{ marginLeft: '1rem', marginBottom: '1rem' }}>
+                <li>Klaus Eisenack, PhD, Resource Economics Group, Humboldt University of Berlin, resource-economics@hu-berlin.de</li>
+                <li>Christian Kimmich, PhD, Institute for Advanced Studies, Vienna, kimmich@ihs.ac.at</li>
+                <li>Rimjhim Aggarwal, PhD, School of Sustainability, Arizona State University, Rimjhim.Aggarwal@asu.edu</li>
+                <li>Atrisha Sarkar, PhD, Dept. of Electrical and Computer Engineering, Western University, atrisha.sarkar@uwo.ca</li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>1. Invitation to Participate</h4>
+              <p>You are being invited to participate in a research study about how people perceive communication from large language models (AI). This study is being conducted by researchers at Humboldt University of Berlin, Institute for Advanced Studies, Arizona State University, and Western University. You have been invited to participate because you are an expert (faculty or graduate student) in the field of social simulation, resource economics, and sustainability, and your insights are valuable to this research.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>2. Why is this study being done?</h4>
+              <p>The purpose of this study is to evaluate if communication generated by an AI can be perceived as similar to communication from a human. We are doing this because there is a growing interest in using AI as a tool to simulate human behavior in social science research, but it is critical to determine if the AI's outputs are a good match for real human data. Your expert judgment will help us answer this question. The results of this study will help researchers understand the validity of using AI-generated data in future social science studies.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>3. How long will you be in this study?</h4>
+              <p>Your participation will involve a single online survey that is expected to take approximately 15-30 minutes to complete.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>4. What will happen during this study?</h4>
+              <p>If you agree to participate, you will be asked to complete a single online survey. There are no separate sessions. The survey will involve the following steps:</p>
+              <ul style={{ marginLeft: '1rem' }}>
+                <li>You will be shown a selected set of games and the communication messages sent within those games.</li>
+                <li>You will be asked to evaluate these messages. The survey has two parts:
+                  <ul style={{ marginLeft: '1rem', marginTop: '0.5rem' }}>
+                    <li>A quantitative section where you will rate the messages on specific criteria (e.g., commitment, emotion, predicted behavior).</li>
+                    <li>A qualitative section where you will provide short, textual justifications in response to open-ended questions about the messages.</li>
+                  </ul>
+                </li>
+                <li>You will be able to complete the survey at your convenience.</li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>5. What are the risks and harms of participating in this study?</h4>
+              <p>The risks associated with participating in this study are considered minimal. You may experience minor boredom or fatigue from completing the survey, similar to what you might encounter when filling out any online form.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>6. What are the potential benefits of participating in this study?</h4>
+              <p>You may not directly benefit from participating in this study. However, the information gathered may provide benefits to the social science community as a whole by helping researchers and designers better understand the potential and limitations of using AI to simulate human behavior.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>7. How will your information be kept confidential?</h4>
+              <p>All information we collect from you will be treated with the utmost confidentiality. We will not collect directly identifying information such as your name.</p>
+              <ul style={{ marginLeft: '1rem' }}>
+                <li>During the study, your responses will be coded with a unique, randomly generated participant ID. This coded data is temporarily stored on secure servers managed by our service providers.</li>
+                <li>After data collection is complete, the list linking your participant ID to your coded data will be permanently destroyed. At this point, the data becomes fully anonymized.</li>
+                <li>The anonymized research data will be stored on a secure, encrypted, and password-protected server at Humboldt University for a minimum of 7 years. Access to this data will be restricted to the researchers listed on this form.</li>
+                <li>If the results of the study are published, your name will not be used, and no information that could identify you will be included.</li>
+              </ul>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>8. Will you be compensated for your participation?</h4>
+              <p>No. Given the nature of this research as an expert survey, there is no monetary compensation for participation.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>9. Can you choose to leave the study?</h4>
+              <p>Your participation in this study is voluntary. You can choose to leave the study at any time by closing your browser window or clicking the 'quit study' button. If you withdraw before completing the study, your responses will not be used in the study.</p>
+              <p>You have the right to request the withdrawal of your data after you have completed the study. You can make this request by contacting the Principal Investigator. This right exists up until the point the data is anonymized. This will occur after data collection for all participants is complete, at which point the link between your participant ID and your responses will be permanently destroyed. Once your data has been anonymized, we will be unable to identify and withdraw your specific responses from the dataset.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>10. What are your rights as a participant?</h4>
+              <p>Your participation in this study is voluntary. You may decide not to be in this study. Even if you consent to participate and choose to leave the study at any time it will have no effect on your academic standing or standing with the research team. You do not waive any legal right by consenting to this study.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>11. Whom do you contact for questions?</h4>
+              <p>If you have questions about this research study please contact one of the Principal Investigators named above through email.</p>
+              <p>If you have any questions about your rights as a research participant or the conduct of this study, you may contact The Office of Human Research Ethics at ethics@uwo.ca. This office oversees the ethical conduct of research studies and is not part of the study team. Everything that you discuss will be kept confidential.</p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4>12. Confirming Your Consent</h4>
+              <p>You can save a copy of this information for your records.</p>
+              <p>By clicking the 'I agree to participate' button below, you confirm that you have read and understood this consent form and that you voluntarily agree to participate in this study. If you do not wish to participate, please click the 'I do not wish to participate' button.</p>
             </div>
           </div>
           
-          <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+          <div className="navigation-with-quit landing-nav">
             <button className="btn btn-primary" onClick={() => {
               setStartTime(Date.now());
               setStep(1);
             }}>
-              Start Survey →
+              I agree to participate
             </button>
+            <div className="quit-button-container">
+              <button 
+                className="btn btn-danger btn-small" 
+                onClick={handleQuitStudy}
+              >
+                I do not wish to participate
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -306,7 +401,7 @@ function App() {
   if(step===1 && quantitativeMessages.length) {
     return (
       <div className="survey-container slide-in">
-        <div className="survey-card" style={{ maxWidth: '1200px', width: '95vw' }}>
+        <div className="survey-card" style={{ maxWidth: '1600px', width: '98vw' }}>
           <div className="survey-header">
             <h2 className="survey-title" style={{ fontSize: '2rem' }}>Survey Table - Page 1</h2>
             <p className="survey-subtitle">Quantitative Evaluation: Rate each message across different dimensions</p>
@@ -316,6 +411,23 @@ function App() {
             <div className="instructions">
               <h3>Instructions</h3>
               <p>Please evaluate all messages sent by trustees to trustors in a trust game setting. Use the table below to provide your quantitative responses for each message.</p>
+            </div>
+
+            <div className="survey-section">
+              <h3 style={{ color: '#4f46e5', marginBottom: '1rem' }}>Game Rules</h3>
+              <p>Trust games are common experimental games to study trust between individuals. The game involves two players: a <strong>trustor</strong> and a <strong>trustee</strong>.</p>
+              <p>The trustor makes the first move by choosing between two options: <strong>OUT</strong> or <strong>IN</strong>. If the trustor chooses <strong>OUT</strong>, the game ends immediately, and both players receive a modest, guaranteed payoff.</p>
+              <p>If the trustor chooses <strong>IN</strong>, the trustee faces a decision: whether to <strong>ROLL</strong> or <strong>DON'T ROLL</strong> a virtual dice.</p>
+              <p>If the trustee chooses <strong>ROLL</strong>, there is a high probability (e.g., 5 out of 6) that both players will receive a relatively high payoff. However, there is also a small chance (e.g., 1 out of 6) that the trustee will receive a higher payoff while the trustor receives nothing.</p>
+              <p>If the trustee chooses <strong>DON'T ROLL</strong>, the trustee secures the high payoff for themselves with certainty, and the trustor receives nothing.</p>
+              <p>Before the trustor makes their decision, the trustee can send a one-time, free-form message to the trustor. This message is non-binding and contains nothing that can be enforced.</p>
+              
+              <div className="diagram-container">
+                <img 
+                  src="/game_diag.png" 
+                  alt="Trust Game Diagram" 
+                />
+              </div>
             </div>
 
             <div className="survey-table-container">
@@ -465,7 +577,15 @@ function App() {
               </table>
             </div>
 
-            <div className="submit-section">
+            <div className="navigation-with-quit">
+              <div className="quit-button-container">
+                <button 
+                  className="btn btn-danger btn-small" 
+                  onClick={handleQuitStudy}
+                >
+                  Quit Study
+                </button>
+              </div>
               <button className="btn btn-primary btn-lg" onClick={handleNextPage}>
                 Continue to Qualitative Questions →
               </button>
@@ -480,7 +600,7 @@ function App() {
   if(step===2 && qualitativeMessages.length) {
     return (
       <div className="survey-container slide-in">
-        <div className="survey-card" style={{ maxWidth: '1400px', width: '95vw' }}>
+        <div className="survey-card" style={{ maxWidth: '1600px', width: '98vw' }}>
           <div className="survey-header">
             <h2 className="survey-title" style={{ fontSize: '2rem' }}>Survey Table - Page 2</h2>
             <p className="survey-subtitle">Qualitative Evaluation: Provide detailed responses for each message</p>
@@ -579,7 +699,15 @@ function App() {
               </table>
             </div>
 
-            <div className="submit-section">
+            <div className="navigation-with-quit">
+              <div className="quit-button-container">
+                <button 
+                  className="btn btn-danger btn-small" 
+                  onClick={handleQuitStudy}
+                >
+                  Quit Study
+                </button>
+              </div>
               <button className="btn btn-success btn-lg" onClick={handleSubmit}>
                 Submit Survey
               </button>
@@ -614,7 +742,7 @@ function App() {
             </div>
             <div style={{ marginTop: '2rem' }}>
               <p style={{ fontSize: '0.9rem', color: '#9ca3af', fontStyle: 'italic' }}>
-                If you have any questions about this research, please contact our research team through the institutions listed at the beginning of this survey.
+                You can request that your data be deleted by contacting the research team at resource-economics@hu-berlin.de. The session id that is associated with your data will be deleted within one day of concluding data collection. If you have any questions about this research, please contact our research team through the institutions listed at the beginning of this survey.
               </p>
             </div>
           </div>
