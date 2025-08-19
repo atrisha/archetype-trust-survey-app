@@ -30,8 +30,8 @@ CREATE TABLE survey_sessions (
 -- Survey responses table - stores all survey responses
 CREATE TABLE survey_responses (
     id SERIAL PRIMARY KEY,
-    session_id UUID NOT NULL REFERENCES survey_sessions(id) ON DELETE CASCADE,
-    message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    session_id UUID NOT NULL,
+    message_id INTEGER NOT NULL,
     
     -- Quantitative responses
     commitment VARCHAR(50), -- explicit-promise, explicit-no-promise, implicit-suggestion, no-commitment
