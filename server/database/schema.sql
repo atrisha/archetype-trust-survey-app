@@ -6,7 +6,8 @@ CREATE TABLE messages (
     message TEXT NOT NULL,
     generated INTEGER NOT NULL CHECK (generated IN (0, 1)), -- 0 = human-written, 1 = AI-generated
     in_role INTEGER, -- the role context
-    roll_value INTEGER, -- roll value from original data
+    roll_value NUMERIC, -- roll value from original data (changed to NUMERIC to handle decimals)
+    generation_type VARCHAR(100), -- new column for generation type information
     set_quant INTEGER, -- quantitative set identifier
     set_qual INTEGER, -- qualitative set identifier
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -22,7 +23,8 @@ CREATE TABLE survey_sessions (
     status VARCHAR(50) DEFAULT 'in_progress', -- in_progress, completed, abandoned
     set_quant INTEGER, -- assigned quantitative set for this session
     set_qual INTEGER, -- assigned qualitative set for this session
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE -- when survey was completed
 );
 
 -- Survey responses table - stores all survey responses
@@ -87,7 +89,8 @@ RETURNS TABLE (
     message TEXT,
     generated INTEGER,
     in_role INTEGER,
-    roll_value INTEGER,
+    roll_value NUMERIC,
+    generation_type VARCHAR(100),
     set_quant INTEGER,
     set_qual INTEGER
 ) AS $$
@@ -99,7 +102,7 @@ BEGIN
     
     RETURN QUERY
     (
-        SELECT m.id, m.message, m.generated, m.in_role, m.roll_value, m.set_quant, m.set_qual
+        SELECT m.id, m.message, m.generated, m.in_role, m.roll_value, m.generation_type, m.set_quant, m.set_qual
         FROM messages m
         WHERE m.is_active = TRUE AND m.generated = 0
         ORDER BY RANDOM()
@@ -107,7 +110,7 @@ BEGIN
     )
     UNION ALL
     (
-        SELECT m.id, m.message, m.generated, m.in_role, m.roll_value, m.set_quant, m.set_qual
+        SELECT m.id, m.message, m.generated, m.in_role, m.roll_value, m.generation_type, m.set_quant, m.set_qual
         FROM messages m
         WHERE m.is_active = TRUE AND m.generated = 1
         ORDER BY RANDOM()
@@ -271,7 +274,8 @@ RETURNS TABLE (
     message TEXT,
     generated INTEGER,
     in_role INTEGER,
-    roll_value INTEGER,
+    roll_value NUMERIC,
+    generation_type VARCHAR(100),
     set_quant INTEGER,
     set_qual INTEGER,
     message_type VARCHAR(20) -- 'quantitative' or 'qualitative'
@@ -280,7 +284,7 @@ BEGIN
     RETURN QUERY
     (
         -- Get quantitative messages (matching set_quant)
-        SELECT m.id, m.message, m.generated, m.in_role, m.roll_value, m.set_quant, m.set_qual, 'quantitative'::VARCHAR(20)
+        SELECT m.id, m.message, m.generated, m.in_role, m.roll_value, m.generation_type, m.set_quant, m.set_qual, 'quantitative'::VARCHAR(20)
         FROM messages m
         WHERE m.is_active = TRUE 
         AND m.set_quant = session_set_quant
@@ -290,7 +294,7 @@ BEGIN
     UNION ALL
     (
         -- Get qualitative messages (matching set_qual)
-        SELECT m.id, m.message, m.generated, m.in_role, m.roll_value, m.set_quant, m.set_qual, 'qualitative'::VARCHAR(20)
+        SELECT m.id, m.message, m.generated, m.in_role, m.roll_value, m.generation_type, m.set_quant, m.set_qual, 'qualitative'::VARCHAR(20)
         FROM messages m
         WHERE m.is_active = TRUE 
         AND m.set_qual = session_set_qual

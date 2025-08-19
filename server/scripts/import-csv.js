@@ -13,8 +13,10 @@ function parseCSV(csv, defaultSetQuant = null, defaultSetQual = null) {
   const headerLine = lines[0].toLowerCase();
   const hasSetQuant = headerLine.includes('set_quant');
   const hasSetQual = headerLine.includes('set_qual');
+  const hasGenerationType = headerLine.includes('generation_type');
   
   const headers = ['generated', 'message', 'in', 'roll'];
+  if (hasGenerationType) headers.push('generation_type');
   if (hasSetQuant) headers.push('set_quant');
   if (hasSetQual) headers.push('set_qual');
   
@@ -64,11 +66,14 @@ function parseCSV(csv, defaultSetQuant = null, defaultSetQual = null) {
       // Handle N/A values
       if (value === 'N/A' || value === '') {
         obj[h] = null;
-      } else if (h === 'generated' || h === 'in' || h === 'roll' || h === 'set_quant' || h === 'set_qual') {
+      } else if (h === 'generated' || h === 'in' || h === 'set_quant' || h === 'set_qual') {
         // Parse integers
         obj[h] = parseInt(value, 10) || 0;
+      } else if (h === 'roll') {
+        // Parse roll as decimal number
+        obj[h] = parseFloat(value) || 0;
       } else {
-        // String values
+        // String values (message, generation_type)
         obj[h] = value;
       }
     });
@@ -117,8 +122,8 @@ async function importCSV(csvFilePath, defaultSetQuant = null, defaultSetQual = n
     
     // Insert messages in batch
     const insertQuery = `
-      INSERT INTO messages (message, generated, in_role, roll_value, set_quant, set_qual) 
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO messages (message, generated, in_role, roll_value, generation_type, set_quant, set_qual) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
     `;
     
     let imported = 0;
@@ -129,6 +134,7 @@ async function importCSV(csvFilePath, defaultSetQuant = null, defaultSetQual = n
           message.generated,
           message.in,
           message.roll,
+          message.generation_type,
           message.set_quant,
           message.set_qual
         ]);
@@ -151,9 +157,25 @@ async function importCSV(csvFilePath, defaultSetQuant = null, defaultSetQual = n
       ORDER BY generated
     `);
     
+    const generationTypeStats = await query(`
+      SELECT 
+        generation_type,
+        COUNT(*) as count
+      FROM messages 
+      WHERE is_active = TRUE 
+      GROUP BY generation_type 
+      ORDER BY generation_type
+    `);
+    
     console.log('\nImport Summary:');
     stats.rows.forEach(row => {
       const type = row.generated === 0 ? 'Human-written' : 'AI-generated';
+      console.log(`  ${type}: ${row.count} messages`);
+    });
+    
+    console.log('\nGeneration Type Breakdown:');
+    generationTypeStats.rows.forEach(row => {
+      const type = row.generation_type || 'Not specified';
       console.log(`  ${type}: ${row.count} messages`);
     });
     

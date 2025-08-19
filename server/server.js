@@ -43,6 +43,7 @@ app.get('/api/messages/sample', async (req, res) => {
       generated: row.generated,
       in: row.in_role,
       roll: row.roll_value,
+      generationType: row.generation_type,
       setQuant: row.set_quant,
       setQual: row.set_qual,
       dbId: row.id // Keep track of database ID
@@ -374,6 +375,63 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
+// Delete incomplete session (when user quits before submitting)
+app.delete('/api/sessions/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // Only delete sessions that don't have responses yet
+    const result = await query(`
+      DELETE FROM survey_sessions 
+      WHERE id = $1 AND completed_at IS NULL
+      RETURNING id
+    `, [sessionId]);
+    
+    if (result.rows.length > 0) {
+      console.log(`Deleted incomplete session: ${sessionId}`);
+      res.json({ message: 'Session deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'Session not found or already completed' });
+    }
+    
+  } catch (error) {
+    console.error('Error deleting session:', error);
+    res.status(500).json({ 
+      error: 'Failed to delete session', 
+      message: error.message 
+    });
+  }
+});
+
+// Handle session cleanup via sendBeacon (POST request)
+app.post('/api/sessions/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    
+    // This endpoint is specifically for cleanup via sendBeacon
+    // Only delete sessions that don't have responses yet
+    const result = await query(`
+      DELETE FROM survey_sessions 
+      WHERE id = $1 AND completed_at IS NULL
+      RETURNING id
+    `, [sessionId]);
+    
+    if (result.rows.length > 0) {
+      console.log(`Cleaned up incomplete session via beacon: ${sessionId}`);
+      res.json({ message: 'Session cleaned up successfully' });
+    } else {
+      res.json({ message: 'Session not found or already completed' });
+    }
+    
+  } catch (error) {
+    console.error('Error cleaning up session:', error);
+    res.status(500).json({ 
+      error: 'Failed to clean up session', 
+      message: error.message 
+    });
+  }
+});
+
 // Error handling middleware
 app.use((error, req, res, next) => {
   console.error('Unhandled error:', error);
@@ -404,6 +462,25 @@ app.listen(PORT, () => {
   console.log(`Trust Survey API server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Set up periodic cleanup of old incomplete sessions (every 30 minutes)
+  setInterval(async () => {
+    try {
+      // Delete incomplete sessions older than 2 hours
+      const result = await query(`
+        DELETE FROM survey_sessions 
+        WHERE completed_at IS NULL 
+        AND created_at < NOW() - INTERVAL '2 hours'
+        RETURNING id
+      `);
+      
+      if (result.rows.length > 0) {
+        console.log(`Cleaned up ${result.rows.length} stale incomplete sessions`);
+      }
+    } catch (error) {
+      console.error('Error during periodic session cleanup:', error);
+    }
+  }, 30 * 60 * 1000); // 30 minutes
 });
 
 module.exports = app;

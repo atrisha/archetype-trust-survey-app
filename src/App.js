@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 
 function App() {
@@ -10,7 +10,7 @@ function App() {
   const [sliderValues, setSliderValues] = useState({});
   const [interactedInputs, setInteractedInputs] = useState({});
   const [sessionId, setSessionId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isQuitting, setIsQuitting] = useState(false);
   
@@ -18,75 +18,108 @@ function App() {
   const [startTime, setStartTime] = useState(null);
   const [responseStartTimes, setResponseStartTimes] = useState({});
   const [responseTimes, setResponseTimes] = useState({});
+  const isInitializedRef = useRef(false);
 
+  // Clean up session if user closes window/tab before completing
   useEffect(() => {
-    async function initializeSurvey() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Create a new survey session
-        console.log('Creating survey session...');
-        const sessionResponse = await fetch('/api/sessions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            participantId: null // You can add participant identification later
-          })
-        });
-        
-        if (!sessionResponse.ok) {
-          throw new Error('Failed to create survey session');
+    const cleanupSession = () => {
+      if (sessionId && step < 3) {
+        // Use sendBeacon for reliable cleanup on page unload
+        if (navigator.sendBeacon) {
+          // Send a simple DELETE request via beacon
+          const url = `/api/sessions/${sessionId}`;
+          navigator.sendBeacon(url, new Blob(['DELETE'], { type: 'text/plain' }));
         }
-        
-        const session = await sessionResponse.json();
-        setSessionId(session.id);
-        console.log('Survey session created:', session.id);
-        
-        // Fetch message samples from API
-        console.log('Fetching message samples...');
-        
-        // Fetch 10 messages for quantitative questions
-        const quantitativeResponse = await fetch('/api/messages/sample?size=10');
-        if (!quantitativeResponse.ok) {
-          throw new Error('Failed to fetch quantitative messages');
-        }
-        const quantitativeData = await quantitativeResponse.json();
-        console.log('Received quantitative messages:', quantitativeData);
-        setQuantitativeMessages(quantitativeData);
-        
-        // Fetch 4 messages for qualitative questions
-        const qualitativeResponse = await fetch('/api/messages/sample?size=4');
-        if (!qualitativeResponse.ok) {
-          throw new Error('Failed to fetch qualitative messages');
-        }
-        const qualitativeData = await qualitativeResponse.json();
-        console.log('Received qualitative messages:', qualitativeData);
-        setQualitativeMessages(qualitativeData);
-        
-        // Initialize slider values to 0 for quantitative messages
-        const initialValues = {};
-        quantitativeData.forEach(msg => {
-          initialValues[`${msg.id}_signaling`] = '0';
-          initialValues[`${msg.id}_prediction`] = '0';
-          initialValues[`${msg.id}_guilt`] = '0';
-        });
-        setSliderValues(initialValues);
-        
-      } catch (error) {
-        console.error('Error initializing survey:', error);
-        setError(error.message);
-      } finally {
-        setIsLoading(false);
       }
-    }
-    
-    initializeSurvey();
-  }, []);
+    };
 
-  // Helper function to track response start time
+    const handleBeforeUnload = (event) => {
+      cleanupSession();
+    };
+
+    const handleVisibilityChange = () => {
+      // If page becomes hidden and user hasn't completed survey, cleanup
+      if (document.visibilityState === 'hidden' && sessionId && step < 3) {
+        cleanupSession();
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup function
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [sessionId, step]);
+
+  // Remove the problematic useEffect entirely
+
+  async function initializeSurvey() {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Create a new survey session
+      console.log('Creating survey session...');
+      const sessionResponse = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          participantId: null // You can add participant identification later
+        })
+      });
+      
+      if (!sessionResponse.ok) {
+        throw new Error('Failed to create survey session');
+      }
+      
+      const session = await sessionResponse.json();
+      setSessionId(session.id);
+      console.log('Survey session created:', session.id);
+      
+      // Fetch message samples from API
+      console.log('Fetching message samples...');
+      
+      // Fetch 10 messages for quantitative questions
+      const quantitativeResponse = await fetch('/api/messages/sample?size=10');
+      if (!quantitativeResponse.ok) {
+        throw new Error('Failed to fetch quantitative messages');
+      }
+      const quantitativeData = await quantitativeResponse.json();
+      console.log('Received quantitative messages:', quantitativeData);
+      setQuantitativeMessages(quantitativeData);
+      
+      // Fetch 4 messages for qualitative questions
+      const qualitativeResponse = await fetch('/api/messages/sample?size=4');
+      if (!qualitativeResponse.ok) {
+        throw new Error('Failed to fetch qualitative messages');
+      }
+      const qualitativeData = await qualitativeResponse.json();
+      console.log('Received qualitative messages:', qualitativeData);
+      setQualitativeMessages(qualitativeData);
+      
+      // Initialize slider values to 0 for quantitative messages
+      const initialValues = {};
+      quantitativeData.forEach(msg => {
+        initialValues[`${msg.id}_signaling`] = '0';
+        initialValues[`${msg.id}_prediction`] = '0';
+        initialValues[`${msg.id}_guilt`] = '0';
+      });
+      setSliderValues(initialValues);
+      
+    } catch (error) {
+      console.error('Error initializing survey:', error);
+      setError(error.message);
+      isInitializedRef.current = false; // Reset flag so user can try again
+    } finally {
+      setIsLoading(false);
+    }
+  }  // Helper function to track response start time
   const trackResponseStart = useCallback((inputKey) => {
     setResponseStartTimes(prev => {
       if (!prev[inputKey]) {
@@ -174,6 +207,7 @@ function App() {
         setIsLoading(true);
         
         console.log('Submitting survey responses...');
+        console.log('🔒 PERSISTING DATA TO DATABASE - This is the only point where user data is saved');
         const totalSessionTime = startTime ? Date.now() - startTime : null;
         
         const submitResponse = await fetch(`/api/sessions/${sessionId}/responses`, {
@@ -210,11 +244,24 @@ function App() {
     }
   };
 
-  const handleQuitStudy = () => {
+  const handleQuitStudy = async () => {
     if (window.confirm('Are you sure you want to quit the study?\n\nYour progress will not be saved and you will not be able to return to complete the survey.\n\nClick "OK" to quit or "Cancel" to continue.')) {
       setIsQuitting(true);
-      // You could optionally send a quit notification to the server here
-      // Reset the app or redirect
+      
+      // If session was created, delete it to keep database clean
+      if (sessionId) {
+        try {
+          await fetch(`/api/sessions/${sessionId}`, {
+            method: 'DELETE'
+          });
+          console.log('Deleted incomplete session');
+        } catch (error) {
+          console.error('Error deleting session:', error);
+          // Don't block quitting if deletion fails
+        }
+      }
+      
+      // Redirect after a short delay
       setTimeout(() => {
         window.location.href = 'about:blank'; // This will show a blank page
       }, 2000); // Show quit message for 2 seconds before redirecting
@@ -377,16 +424,27 @@ function App() {
           </div>
           
           <div className="navigation-with-quit landing-nav">
-            <button className="btn btn-primary" onClick={() => {
-              setStartTime(Date.now());
-              setStep(1);
-            }}>
-              I agree to participate
+            <button 
+              className="btn btn-primary" 
+              onClick={async () => {
+                if (!isInitializedRef.current) {
+                  setStartTime(Date.now());
+                  isInitializedRef.current = true;
+                  await initializeSurvey();
+                  setStep(1);
+                } else {
+                  setStep(1);
+                }
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Setting up survey...' : 'I agree to participate'}
             </button>
             <div className="quit-button-container">
               <button 
                 className="btn btn-danger btn-small" 
                 onClick={handleQuitStudy}
+                disabled={isLoading}
               >
                 I do not wish to participate
               </button>
