@@ -48,6 +48,7 @@ function App() {
         })
       });
       
+      
       if (!sessionResponse.ok) {
         throw new Error('Failed to create survey session');
       }
@@ -55,31 +56,25 @@ function App() {
       const session = await sessionResponse.json();
       setSessionId(session.id);
       console.log('Survey session created:', session.id);
-      
+
       // Fetch message samples from API
-      console.log('Fetching message samples...');
+      console.log('Fetching messages for session:', session.id);
       
-      // Fetch 10 messages for quantitative questions
-      const quantitativeResponse = await fetch('/api/messages/sample?size=10');
-      if (!quantitativeResponse.ok) {
-        throw new Error('Failed to fetch quantitative messages');
+      // Fetch messages specific to this session's set assignments
+      const messagesResponse = await fetch(`/api/sessions/${session.id}/messages`);
+      if (!messagesResponse.ok) {
+        throw new Error('Failed to fetch session messages');
       }
-      const quantitativeData = await quantitativeResponse.json();
-      console.log('Received quantitative messages:', quantitativeData);
-      setQuantitativeMessages(quantitativeData);
+      const messagesData = await messagesResponse.json();
+      console.log('Received session messages:', messagesData);      setQuantitativeMessages(messagesData.quantitativeMessages);
+      setQualitativeMessages(messagesData.qualitativeMessages);
       
-      // Fetch 4 messages for qualitative questions
-      const qualitativeResponse = await fetch('/api/messages/sample?size=4');
-      if (!qualitativeResponse.ok) {
-        throw new Error('Failed to fetch qualitative messages');
-      }
-      const qualitativeData = await qualitativeResponse.json();
-      console.log('Received qualitative messages:', qualitativeData);
-      setQualitativeMessages(qualitativeData);
+      console.log(`Session ${sessionId} - set_quant: ${messagesData.setQuant}, set_qual: ${messagesData.setQual}`);
+      console.log(`Loaded ${messagesData.quantitativeMessages.length} quantitative and ${messagesData.qualitativeMessages.length} qualitative messages`);
       
       // Initialize slider values to 0 for quantitative messages
       const initialValues = {};
-      quantitativeData.forEach(msg => {
+      messagesData.quantitativeMessages.forEach(msg => {
         initialValues[`${msg.id}_signaling`] = '0';
         initialValues[`${msg.id}_prediction`] = '0';
         initialValues[`${msg.id}_guilt`] = '0';
