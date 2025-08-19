@@ -38,7 +38,7 @@ app.get('/api/messages/sample', async (req, res) => {
     
     // Format the messages to match frontend expectations
     const messages = result.rows.map((row, index) => ({
-      id: `msg_${index}`,
+      id: `msg_${row.id}`, // Use database ID, not index
       message: row.message,
       generated: row.generated,
       in: row.in_role,
@@ -180,9 +180,9 @@ app.post('/api/sessions/:sessionId/responses', async (req, res) => {
       const insertQuery = `
         INSERT INTO survey_responses (
           session_id, message_id, commitment, signaling, emotion, 
-          prediction, guilt, social_connection, trustee_expectations, 
-          influence_behavior, guilt_clues, response_time_ms
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          prediction, guilt, trustor_behavior, trustee_behavior, 
+          guilt_clues, response_time_ms
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       `;
       
       let savedCount = 0;
@@ -197,7 +197,7 @@ app.post('/api/sessions/:sessionId/responses', async (req, res) => {
         try {
           // Calculate total response time for this message
           let totalResponseTime = 0;
-          const messageFields = ['commitment', 'signaling', 'emotion', 'prediction', 'guilt', 'socialConnection', 'trusteeExpectations', 'influenceBehavior', 'guiltClues'];
+          const messageFields = ['commitment', 'signaling', 'emotion', 'prediction', 'guilt', 'trusteeBehavior', 'trustorBehavior', 'guiltClues'];
           
           messageFields.forEach(field => {
             const timeKey = `${messageId}_${field}`;
@@ -214,9 +214,8 @@ app.post('/api/sessions/:sessionId/responses', async (req, res) => {
             response.emotion || null,
             response.prediction ? parseInt(response.prediction) : null,
             response.guilt ? parseInt(response.guilt) : null,
-            response.socialConnection || null,
-            response.trusteeExpectations || null,
-            response.influenceBehavior || null,
+            response.trustorBehavior || null,
+            response.trusteeBehavior || null,
             response.guiltClues || null,
             totalResponseTime > 0 ? totalResponseTime : null
           ]);
@@ -266,9 +265,8 @@ app.get('/api/results', async (req, res) => {
         sr.emotion,
         sr.prediction,
         sr.guilt,
-        sr.social_connection,
-        sr.trustee_expectations,
-        sr.influence_behavior,
+        sr.trustor_behavior,
+        sr.trustee_behavior,
         sr.guilt_clues,
         sr.response_time_ms,
         sr.created_at as response_created
@@ -403,34 +401,7 @@ app.delete('/api/sessions/:sessionId', async (req, res) => {
   }
 });
 
-// Handle session cleanup via sendBeacon (POST request)
-app.post('/api/sessions/:sessionId', async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    
-    // This endpoint is specifically for cleanup via sendBeacon
-    // Only delete sessions that don't have responses yet
-    const result = await query(`
-      DELETE FROM survey_sessions 
-      WHERE id = $1 AND completed_at IS NULL
-      RETURNING id
-    `, [sessionId]);
-    
-    if (result.rows.length > 0) {
-      console.log(`Cleaned up incomplete session via beacon: ${sessionId}`);
-      res.json({ message: 'Session cleaned up successfully' });
-    } else {
-      res.json({ message: 'Session not found or already completed' });
-    }
-    
-  } catch (error) {
-    console.error('Error cleaning up session:', error);
-    res.status(500).json({ 
-      error: 'Failed to clean up session', 
-      message: error.message 
-    });
-  }
-});
+// Admin endpoint to get all messages
 
 // Error handling middleware
 app.use((error, req, res, next) => {
@@ -462,25 +433,6 @@ app.listen(PORT, () => {
   console.log(`Trust Survey API server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  
-  // Set up periodic cleanup of old incomplete sessions (every 30 minutes)
-  setInterval(async () => {
-    try {
-      // Delete incomplete sessions older than 2 hours
-      const result = await query(`
-        DELETE FROM survey_sessions 
-        WHERE completed_at IS NULL 
-        AND created_at < NOW() - INTERVAL '2 hours'
-        RETURNING id
-      `);
-      
-      if (result.rows.length > 0) {
-        console.log(`Cleaned up ${result.rows.length} stale incomplete sessions`);
-      }
-    } catch (error) {
-      console.error('Error during periodic session cleanup:', error);
-    }
-  }, 30 * 60 * 1000); // 30 minutes
 });
 
 module.exports = app;

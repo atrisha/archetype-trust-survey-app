@@ -41,9 +41,8 @@ CREATE TABLE survey_responses (
     guilt INTEGER CHECK (guilt BETWEEN 0 AND 5),
     
     -- Qualitative responses
-    social_connection TEXT,
-    trustee_expectations TEXT,
-    influence_behavior TEXT,
+    trustor_behavior TEXT,
+    trustee_behavior TEXT,
     guilt_clues TEXT,
     
     -- Metadata

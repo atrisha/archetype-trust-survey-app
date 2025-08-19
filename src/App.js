@@ -14,46 +14,20 @@ function App() {
   const [error, setError] = useState(null);
   const [isQuitting, setIsQuitting] = useState(false);
   
+  // Definition visibility state
+  const [showDefinitions, setShowDefinitions] = useState({
+    commitment: false,
+    signaling: false,
+    emotion: false,
+    prediction: false,
+    guilt: false
+  });
+  
   // Time tracking
   const [startTime, setStartTime] = useState(null);
   const [responseStartTimes, setResponseStartTimes] = useState({});
   const [responseTimes, setResponseTimes] = useState({});
   const isInitializedRef = useRef(false);
-
-  // Clean up session if user closes window/tab before completing
-  useEffect(() => {
-    const cleanupSession = () => {
-      if (sessionId && step < 3) {
-        // Use sendBeacon for reliable cleanup on page unload
-        if (navigator.sendBeacon) {
-          // Send a simple DELETE request via beacon
-          const url = `/api/sessions/${sessionId}`;
-          navigator.sendBeacon(url, new Blob(['DELETE'], { type: 'text/plain' }));
-        }
-      }
-    };
-
-    const handleBeforeUnload = (event) => {
-      cleanupSession();
-    };
-
-    const handleVisibilityChange = () => {
-      // If page becomes hidden and user hasn't completed survey, cleanup
-      if (document.visibilityState === 'hidden' && sessionId && step < 3) {
-        cleanupSession();
-      }
-    };
-
-    // Add event listeners
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Cleanup function
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [sessionId, step]);
 
   // Remove the problematic useEffect entirely
 
@@ -119,7 +93,17 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }  // Helper function to track response start time
+  }
+  
+  // Helper function to toggle definition visibility
+  const toggleDefinitions = useCallback((columnType) => {
+    setShowDefinitions(prev => ({
+      ...prev,
+      [columnType]: !prev[columnType]
+    }));
+  }, []);
+
+  // Helper function to track response start time
   const trackResponseStart = useCallback((inputKey) => {
     setResponseStartTimes(prev => {
       if (!prev[inputKey]) {
@@ -182,9 +166,8 @@ function App() {
     const requiredFields = [];
     qualitativeMessages.forEach(msg => {
       requiredFields.push(
-        `${msg.id}_socialConnection`,
-        `${msg.id}_trusteeExpectations`,
-        `${msg.id}_influenceBehavior`,
+        `${msg.id}_trusteeBehavior`,
+        `${msg.id}_trustorBehavior`,
         `${msg.id}_guiltClues`
       );
     });
@@ -492,12 +475,111 @@ function App() {
               <table className="survey-table">
                 <thead>
                   <tr>
-                    <th>Message</th>
-                    <th>Commitment/Promise</th>
-                    <th>Personal Signaling (1-5)</th>
-                    <th>Emotions</th>
-                    <th>ROLL Likelihood (0-100%)</th>
-                    <th>Guilt Level (1-5)</th>
+                    <th className="message-header">Message</th>
+                    <th className="header-with-info">
+                      <div className="header-title">Commitment</div>
+                      <div className="header-subtitle">Is the trustee making a commitment or promise to return money?</div>
+                      <div className="definition-toggle">
+                        <button 
+                          className="toggle-definitions-btn"
+                          onClick={() => toggleDefinitions('commitment')}
+                          type="button"
+                        >
+                          {showDefinitions.commitment ? 'Hide definitions' : 'Show definitions'}
+                        </button>
+                      </div>
+                      {showDefinitions.commitment && (
+                        <div className="header-definitions">
+                          <div className="definition-item">
+                            <strong>Explicit Promise:</strong> The message indicates a return or cooperative action
+                          </div>
+                          <div className="definition-item">
+                            <strong>Explicit 'No Promise':</strong> The message indicates a non-cooperative action
+                          </div>
+                          <div className="definition-item">
+                            <strong>Implicit Suggestion:</strong> A hint or persuasive language implying trustworthy behavior
+                          </div>
+                          <div className="definition-item">
+                            <strong>No Commitment:</strong> The message does not imply any commitment to any future action
+                          </div>
+                        </div>
+                      )}
+                    </th>
+                    <th className="header-with-info">
+                      <div className="header-title">Signaling (0-5)</div>
+                      <div className="header-subtitle">Does the message signal a personal trait or characteristic of the trustee?</div>
+                      <div className="definition-toggle">
+                        <button 
+                          className="toggle-definitions-btn"
+                          onClick={() => toggleDefinitions('signaling')}
+                          type="button"
+                        >
+                          {showDefinitions.signaling ? 'Hide scale' : 'Show scale'}
+                        </button>
+                      </div>
+                      {showDefinitions.signaling && (
+                        <div className="header-scale">
+                          <span>0 = Not at all</span>
+                          <span>5 = Very much</span>
+                        </div>
+                      )}
+                    </th>
+                    <th className="header-with-info">
+                      <div className="header-title">Emotion</div>
+                      <div className="header-subtitle">Does the message convey emotions?</div>
+                      <div className="definition-toggle">
+                        <button 
+                          className="toggle-definitions-btn"
+                          onClick={() => toggleDefinitions('emotion')}
+                          type="button"
+                        >
+                          {showDefinitions.emotion ? 'Hide options' : 'Show options'}
+                        </button>
+                      </div>
+                      {showDefinitions.emotion && (
+                        <div className="header-options">
+                          <span>Neutral • Negative • Positive</span>
+                        </div>
+                      )}
+                    </th>
+                    <th className="header-with-info">
+                      <div className="header-title">Prediction (0-100%)</div>
+                      <div className="header-subtitle">Imagine you received this message, how likely is it that the trustee who sent this message will choose ROLL?</div>
+                      <div className="definition-toggle">
+                        <button 
+                          className="toggle-definitions-btn"
+                          onClick={() => toggleDefinitions('prediction')}
+                          type="button"
+                        >
+                          {showDefinitions.prediction ? 'Hide scale' : 'Show scale'}
+                        </button>
+                      </div>
+                      {showDefinitions.prediction && (
+                        <div className="header-scale">
+                          <span>0% = Very unlikely</span>
+                          <span>100% = Very likely</span>
+                        </div>
+                      )}
+                    </th>
+                    <th className="header-with-info">
+                      <div className="header-title">Guilt Response (0-5)</div>
+                      <div className="header-subtitle">Imagine you are the trustee, how guilty would you feel to choose OUT after sending this message?</div>
+                      <div className="definition-toggle">
+                        <button 
+                          className="toggle-definitions-btn"
+                          onClick={() => toggleDefinitions('guilt')}
+                          type="button"
+                        >
+                          {showDefinitions.guilt ? 'Hide scale' : 'Show scale'}
+                        </button>
+                      </div>
+                      {showDefinitions.guilt && (
+                        <div className="header-scale">
+                          <span>0 = Not guilty at all</span>
+                          <span>5 = Very guilty</span>
+                        </div>
+                      )}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -671,14 +753,22 @@ function App() {
             </div>
 
             <div className="survey-table-container">
-              <table className="survey-table">
+              <table className="survey-table qualitative-table">
                 <thead>
                   <tr>
-                    <th>Message</th>
-                    <th>Social Connection</th>
-                    <th>Trustee Expectations</th>
-                    <th>Influence on Trustor</th>
-                    <th>Guilt Clues</th>
+                    <th className="message-header">Message</th>
+                    <th className="qual-header-with-info">
+                      <div className="qual-header-title">Trustee's Behavior</div>
+                      <div className="qual-header-definition">Do you think the trustor forms expectations about the trustee's behavior? Why not or why, and if so: which expectations?</div>
+                    </th>
+                    <th className="qual-header-with-info">
+                      <div className="qual-header-title">Trustor's Behavior</div>
+                      <div className="qual-header-definition">Do you think the trustee expects that they will influence the trustor's anticipated behavior? Why not or why, and if so: how?</div>
+                    </th>
+                    <th className="qual-header-with-info">
+                      <div className="qual-header-title">Guilt</div>
+                      <div className="qual-header-definition">Do you find clues from the message and the decisions that the trustee would feel guilty if they choose OUT? Why not or why, and if so: Which aspects of their behavior reveal this?</div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -688,49 +778,33 @@ function App() {
                         "{m.message}"
                       </td>
                       
-                      {/* Social Connection Textarea */}
+                      {/* Trustee's Behavior Textarea */}
                       <td className="input-cell">
-                        <div className={`textarea-container ${interactedInputs[`${m.id}_socialConnection`] ? 'completed' : ''}`}>
+                        <div className={`textarea-container ${interactedInputs[`${m.id}_trusteeBehavior`] ? 'completed' : ''}`}>
                           <textarea 
                             className="form-textarea" 
                             rows={4} 
                             style={{ width: '100%', minWidth: '250px', fontSize: '0.875rem' }}
-                            placeholder="How might this message affect the social connection between trustor and trustee? Please elaborate on your thoughts..."
-                            onChange={e=>handleChange(m.id,'socialConnection',e.target.value)} 
+                            value={responses[m.id]?.trusteeBehavior || ''}
+                            onChange={e=>handleChange(m.id,'trusteeBehavior',e.target.value)} 
                           />
-                          {!interactedInputs[`${m.id}_socialConnection`] && (
+                          {!interactedInputs[`${m.id}_trusteeBehavior`] && (
                             <div className="required-indicator">* Required</div>
                           )}
                         </div>
                       </td>
                       
-                      {/* Trustee Expectations Textarea */}
+                      {/* Trustor's Behavior Textarea */}
                       <td className="input-cell">
-                        <div className={`textarea-container ${interactedInputs[`${m.id}_trusteeExpectations`] ? 'completed' : ''}`}>
+                        <div className={`textarea-container ${interactedInputs[`${m.id}_trustorBehavior`] ? 'completed' : ''}`}>
                           <textarea 
                             className="form-textarea" 
                             rows={4} 
                             style={{ width: '100%', minWidth: '250px', fontSize: '0.875rem' }}
-                            placeholder="What do you think the trustee expects from sending this message? What might be their underlying motivations?"
-                            onChange={e=>handleChange(m.id,'trusteeExpectations',e.target.value)} 
+                            value={responses[m.id]?.trustorBehavior || ''}
+                            onChange={e=>handleChange(m.id,'trustorBehavior',e.target.value)} 
                           />
-                          {!interactedInputs[`${m.id}_trusteeExpectations`] && (
-                            <div className="required-indicator">* Required</div>
-                          )}
-                        </div>
-                      </td>
-                      
-                      {/* Influence Behavior Textarea */}
-                      <td className="input-cell">
-                        <div className={`textarea-container ${interactedInputs[`${m.id}_influenceBehavior`] ? 'completed' : ''}`}>
-                          <textarea 
-                            className="form-textarea" 
-                            rows={4} 
-                            style={{ width: '100%', minWidth: '250px', fontSize: '0.875rem' }}
-                            placeholder="How might this message influence the trustor's behavior and decision-making? What psychological factors come into play?"
-                            onChange={e=>handleChange(m.id,'influenceBehavior',e.target.value)} 
-                          />
-                          {!interactedInputs[`${m.id}_influenceBehavior`] && (
+                          {!interactedInputs[`${m.id}_trustorBehavior`] && (
                             <div className="required-indicator">* Required</div>
                           )}
                         </div>
@@ -743,7 +817,7 @@ function App() {
                             className="form-textarea" 
                             rows={4} 
                             style={{ width: '100%', minWidth: '250px', fontSize: '0.875rem' }}
-                            placeholder="What elements in this message might induce guilt if the trustee doesn't follow through? Analyze the emotional undertones..."
+                            value={responses[m.id]?.guiltClues || ''}
                             onChange={e=>handleChange(m.id,'guiltClues',e.target.value)} 
                           />
                           {!interactedInputs[`${m.id}_guiltClues`] && (
