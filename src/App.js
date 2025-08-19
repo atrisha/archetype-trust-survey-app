@@ -231,19 +231,6 @@ function App() {
     if (window.confirm('Are you sure you want to quit the study?\n\nYour progress will not be saved and you will not be able to return to complete the survey.\n\nClick "OK" to quit or "Cancel" to continue.')) {
       setIsQuitting(true);
       
-      // If session was created, delete it to keep database clean
-      if (sessionId) {
-        try {
-          await fetch(`/api/sessions/${sessionId}`, {
-            method: 'DELETE'
-          });
-          console.log('Deleted incomplete session');
-        } catch (error) {
-          console.error('Error deleting session:', error);
-          // Don't block quitting if deletion fails
-        }
-      }
-      
       // Redirect after a short delay
       setTimeout(() => {
         window.location.href = 'about:blank'; // This will show a blank page

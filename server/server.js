@@ -373,34 +373,6 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// Delete incomplete session (when user quits before submitting)
-app.delete('/api/sessions/:sessionId', async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    
-    // Only delete sessions that don't have responses yet
-    const result = await query(`
-      DELETE FROM survey_sessions 
-      WHERE id = $1 AND completed_at IS NULL
-      RETURNING id
-    `, [sessionId]);
-    
-    if (result.rows.length > 0) {
-      console.log(`Deleted incomplete session: ${sessionId}`);
-      res.json({ message: 'Session deleted successfully' });
-    } else {
-      res.status(404).json({ error: 'Session not found or already completed' });
-    }
-    
-  } catch (error) {
-    console.error('Error deleting session:', error);
-    res.status(500).json({ 
-      error: 'Failed to delete session', 
-      message: error.message 
-    });
-  }
-});
-
 // Admin endpoint to get all messages
 
 // Error handling middleware
