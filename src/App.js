@@ -301,10 +301,11 @@ function App() {
             <div style={{ marginBottom: '1.5rem' }}>
               <h4>Principal Investigators:</h4>
               <ul style={{ marginLeft: '1rem', marginBottom: '1rem' }}>
-                <li>Klaus Eisenack, PhD, Resource Economics Group, Humboldt University of Berlin, resource-economics@hu-berlin.de</li>
                 <li>Christian Kimmich, PhD, Institute for Advanced Studies, Vienna, kimmich@ihs.ac.at</li>
                 <li>Rimjhim Aggarwal, PhD, School of Sustainability, Arizona State University, Rimjhim.Aggarwal@asu.edu</li>
+                <li>Rongyu Wang, PhD, Xiamen University</li>
                 <li>Atrisha Sarkar, PhD, Dept. of Electrical and Computer Engineering, Western University, atrisha.sarkar@uwo.ca</li>
+                <li>Klaus Eisenack, PhD, Resource Economics Group, Humboldt University of Berlin, resource-economics@hu-berlin.de</li>
               </ul>
             </div>
 
