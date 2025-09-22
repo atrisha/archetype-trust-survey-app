@@ -432,7 +432,7 @@ body {
   background: #f8fafc;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
-  max-width: 600px; /* Limit width to prevent it from being too wide on the broad canvas */
+  max-width: 750px; /* Increased from 600px to make diagram larger */
   margin-left: auto;
   margin-right: auto;
 }
