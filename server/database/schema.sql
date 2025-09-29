@@ -68,12 +68,7 @@ CREATE INDEX idx_survey_responses_created ON survey_responses(created_at);
 
 -- Sample data insert (you can populate this with your existing CSV data)
 -- Example messages (replace with your actual data)
-INSERT INTO messages (message, generated, in_role, roll_value, set_quant, set_qual) VALUES
-('I promise I will send you the full amount back.', 0, 1, 5, 1, 1),
-('Trust me, I will make sure you get your money back with interest.', 1, 1, 3, 1, 2),
-('I give you my word that I will return everything to you.', 0, 2, 4, 2, 1),
-('You can count on me to do the right thing here.', 1, 2, 6, 2, 2),
-('I will definitely send back more than you sent me.', 0, 1, 2, 1, 3);
+
 
 -- View for getting random sample of messages for surveys
 CREATE OR REPLACE VIEW random_messages AS
