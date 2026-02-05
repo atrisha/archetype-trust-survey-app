@@ -402,7 +402,7 @@ function App() {
             <div style={{ marginBottom: '1.5rem' }}>
               <h4>11. Whom do you contact for questions?</h4>
               <p>If you have questions about this research study please contact one of the Principal Investigators named above through email.</p>
-              <p>If you have any questions about your rights as a research participant or the conduct of this study, you may contact The Office of Human Research Ethics at ethics@uwo.ca. This office oversees the ethical conduct of research studies and is not part of the study team. Everything that you discuss will be kept confidential.</p>
+              <p>If you have any questions about your rights as a research participant or the conduct of this study, you may contact Research ethics at the Humboldt-Unvierstität zu Berlin. This office oversees the ethical conduct of research studies and is not part of the study team. Everything that you discuss will be kept confidential.</p>
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
