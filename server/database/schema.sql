@@ -23,6 +23,8 @@ CREATE TABLE survey_sessions (
     status VARCHAR(50) DEFAULT 'in_progress', -- in_progress, completed, abandoned
     set_quant INTEGER, -- assigned quantitative set for this session
     set_qual INTEGER, -- assigned qualitative set for this session
+    education VARCHAR(50), -- education level: high_school, undergraduate, postgraduate, other
+    source TEXT, -- where participant heard about the survey
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE -- when survey was completed
 );

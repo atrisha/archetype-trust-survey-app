@@ -14,6 +14,11 @@ function App() {
   const [error, setError] = useState(null);
   const [isQuitting, setIsQuitting] = useState(false);
   
+  // Demographic information
+  const [education, setEducation] = useState('');
+  const [educationOther, setEducationOther] = useState('');
+  const [source, setSource] = useState('');
+  
   // Definition visibility state
   const [showDefinitions, setShowDefinitions] = useState({
     commitment: false,
@@ -172,6 +177,20 @@ function App() {
   };
 
   const handleNextPage = () => {
+    // Validate demographic fields first
+    if (!education || education === '') {
+      alert('Please select your education level before proceeding.');
+      return;
+    }
+    if (education === 'other' && (!educationOther || educationOther.trim() === '')) {
+      alert('Please specify your education level before proceeding.');
+      return;
+    }
+    if (!source || source.trim() === '') {
+      alert('Please tell us where you heard about this survey before proceeding.');
+      return;
+    }
+    
     if (validateQuantitativePage()) {
       setStep(2);
     } else {
@@ -198,7 +217,9 @@ function App() {
             responseTimes, // Include response times for each input
             totalSessionTime, // Total time spent in survey
             quantitativeMessages, // Include quantitative message metadata 
-            qualitativeMessages   // Include qualitative message metadata
+            qualitativeMessages,   // Include qualitative message metadata
+            education: education === 'other' ? educationOther : education,  // Include education level (use custom text if "other")
+            source      // Include survey source
           })
         });
         
@@ -445,6 +466,74 @@ function App() {
           </div>
           
           <div className="survey-content">
+            {/* Demographic Information Section */}
+            <div className="survey-section" style={{ marginBottom: '2rem', padding: '1.5rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <h3 style={{ color: '#4f46e5', marginBottom: '1rem' }}>Information about yourself</h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#1e293b' }}>
+                    Your education level <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <select 
+                    value={education}
+                    onChange={(e) => setEducation(e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.75rem', 
+                      borderRadius: '6px', 
+                      border: '1px solid #cbd5e1',
+                      fontSize: '1rem',
+                      background: 'white'
+                    }}
+                    required
+                  >
+                    <option value="">Select your education level...</option>
+                    <option value="high_school">High School</option>
+                    <option value="undergraduate">Undergraduate</option>
+                    <option value="postgraduate">Postgraduate</option>
+                    <option value="other">Other (please specify below)</option>
+                  </select>
+                  {education === 'other' && (
+                    <input
+                      type="text"
+                      placeholder="Please specify your education level"
+                      value={educationOther}
+                      onChange={(e) => setEducationOther(e.target.value)}
+                      style={{
+                        width: '100%',
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '1rem'
+                      }}
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#1e293b' }}>
+                    Where did you hear about this survey? <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
+                    placeholder="e.g., social media, email, colleague, etc."
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '1rem'
+                    }}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="instructions">
               <h3>Instructions</h3>
               <p>Please evaluate all messages sent by trustees to trustors in a trust game setting. Use the table below to provide your quantitative responses for each message.</p>

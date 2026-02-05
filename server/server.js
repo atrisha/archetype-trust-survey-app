@@ -158,7 +158,7 @@ app.get('/api/sessions/:sessionId/messages', async (req, res) => {
 app.post('/api/sessions/:sessionId/responses', async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const { responses, responseTimes, totalSessionTime, quantitativeMessages, qualitativeMessages } = req.body;
+    const { responses, responseTimes, totalSessionTime, quantitativeMessages, qualitativeMessages, education, source } = req.body;
     
     console.log(`Submitting responses for session ${sessionId}...`);
     if (totalSessionTime) {
@@ -170,10 +170,10 @@ app.post('/api/sessions/:sessionId/responses', async (req, res) => {
     
     // Use transaction to ensure all responses are saved together
     await transaction(async (client) => {
-      // Update session status to completed
+      // Update session status to completed and save education and source
       await client.query(
-        'UPDATE survey_sessions SET session_end = CURRENT_TIMESTAMP, status = $1 WHERE id = $2',
-        ['completed', sessionId]
+        'UPDATE survey_sessions SET session_end = CURRENT_TIMESTAMP, status = $1, education = $2, source = $3 WHERE id = $4',
+        ['completed', education, source, sessionId]
       );
       
       // Insert all responses
