@@ -543,7 +543,7 @@ function App() {
               <h3 style={{ color: '#4f46e5', marginBottom: '1rem' }}>Game Rules</h3>
               <p>Trust games are common experimental games to study trust between individuals [1]. The game involves two players: a <strong>trustor (Player A)</strong> and a <strong>trustee (Player B)</strong>.</p>
               <p>The trustor makes the first move by choosing between two options: <strong>OUT</strong> or <strong>IN</strong>. If the trustor chooses <strong>OUT</strong>, the game ends immediately, and both players receive a modest, guaranteed payoff.</p>
-              <p>If the trustor (player A) chooses <strong>IN</strong>, the trustee (player B) faces a decision: whether to <strong>ROLL</strong> or <strong>OUT</strong> a virtual dice.</p>
+              <p>If the trustor (player A) chooses <strong>IN</strong>, the trustee (player B) faces a decision: whether to <strong>ROLL</strong> a virtual dice, or not roll by choosing <strong>OUT</strong>.</p>
               <p>If the trustee (player B) chooses <strong>ROLL</strong>, there is a high probability (e.g., 5 out of 6) that both players will receive a relatively high payoff. However, there is also a small chance (e.g., 1 out of 6) that the trustee will receive a higher payoff while the trustor receives nothing.</p>
               <p>If the trustee (player B) chooses <strong>OUT</strong>, the trustee secures the high payoff for themselves with certainty, and the trustor receives nothing.</p>
               <p>The trustor (player A) will not know whether the trustee (player B) has rolled the dice, and the trustee (player B) knows that the trustor (player A) cannot observe this move. </p>
